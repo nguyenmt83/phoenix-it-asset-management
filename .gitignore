@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.pytest_cache/
+
+# Scratch & temporary
+scratch/
+temp_*.db
+*.tmp

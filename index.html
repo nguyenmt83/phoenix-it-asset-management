@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Thiết Bị CNTT - CLOUD PRO</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SheetJS (Excel Export) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF & AutoTable (PDF Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #printableHandoverForm, #printableHandoverForm * { visibility: visible !important; }
+            #printableHandoverForm {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 210mm !important;
+                margin: 0 auto !important;
+                padding: 6mm 8mm !important;
+                background: #fff !important;
+                color: #000 !important;
+                box-shadow: none !important;
+                border: none !important;
+                font-size: 11px !important;
+                box-sizing: border-box !important;
+            }
+            .no-print { display: none !important; }
+            input, textarea, select {
+                border: none !important;
+                background: transparent !important;
+                appearance: none !important;
+                padding: 0 !important;
+                font-weight: bold !important;
+                box-shadow: none !important;
+            }
+            table { width: 100% !important; table-layout: auto !important; border-collapse: collapse !important; }
+            th, td { padding: 4px 6px !important; word-break: break-word !important; }
+            .page-break-avoid { page-break-inside: avoid !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div class="bg-brand-600 p-2 rounded-lg text-white font-bold shadow-lg shadow-brand-500/30">
+                        <i class="fa-solid fa-server text-lg sm:text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-sm sm:text-lg leading-tight truncate max-w-[140px] sm:max-w-none">IT Asset Management</h1>
+                        <p class="text-[10px] text-emerald-400 font-bold tracking-wide hidden sm:block uppercase">Bảo Mật Phân Quyền & Sao Lưu Drive</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-1 sm:space-x-3">
+                    <div class="hidden md:flex flex-col items-end mr-2">
+                        <span class="text-xs text-slate-400">Không gian làm việc</span>
+                        <span id="displayWorkspace" class="font-bold text-sm text-brand-300 font-mono">---</span>
+                    </div>
+                    <div id="roleBadge" class="flex items-center space-x-1.5 bg-slate-800 border border-slate-700 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm">
+                        <i id="roleIcon" class="fa-solid fa-user-shield text-emerald-400"></i>
+                        <span id="roleText" class="text-white truncate max-w-[80px] sm:max-w-none">Admin</span>
+                    </div>
+                    <button onclick="openChangePasswordModal()" class="admin-only text-slate-400 hover:text-white transition p-2 hidden" title="Đổi mật khẩu Quản trị">
+                        <i class="fa-solid fa-key"></i>
+                    </button>
+                    <button onclick="logout()" class="text-slate-400 hover:text-white transition p-2" title="Đăng xuất / Đổi vai trò">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="bg-white border-b border-slate-200 sticky top-16 z-20 shadow-sm">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex space-x-4 sm:space-x-8 overflow-x-auto custom-scrollbar">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn py-3 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap text-brand-600 border-brand-600 transition-colors">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="switchTab('devices')" id="tab-devices" class="tab-btn py-3 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 transition-colors">
+                    <i class="fa-solid fa-laptop"></i>
+                    <span>Thiết Bị</span>
+                    <span id="badgeTotalDevices" class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold">0</span>
+                </button>
+                <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn py-3 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 transition-colors admin-only">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Nhật Ký Ngày</span>
+                </button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn py-3 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-1.5 sm:space-x-2 whitespace-nowrap text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 transition-colors">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>Báo Cáo & Backup Drive</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full">
+
+        <div id="view-dashboard" class="tab-content space-y-4 sm:space-y-6">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                <div class="bg-white rounded-xl p-3.5 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between col-span-2 lg:col-span-1 hover:shadow-md transition">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Tổng Thiết Bị</p>
+                        <h3 id="kpiTotal" class="text-xl sm:text-2xl font-bold text-slate-900 mt-1">0</h3>
+                        <p class="text-xs text-slate-400 mt-1">Tài sản hệ thống</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg sm:text-xl">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3.5 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Đã Cấp Phát</p>
+                        <h3 id="kpiAllocated" class="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                        <p class="text-[10px] sm:text-xs text-emerald-600/80 mt-1" id="kpiAllocatedPct">0%</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg sm:text-xl">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3.5 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Trong Kho</p>
+                        <h3 id="kpiInStock" class="text-xl sm:text-2xl font-bold text-sky-600 mt-1">0</h3>
+                        <p class="text-[10px] sm:text-xs text-sky-600/80 mt-1">Sẵn sàng</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center text-lg sm:text-xl">
+                        <i class="fa-solid fa-warehouse"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3.5 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Bảo Hành</p>
+                        <h3 id="kpiRepair" class="text-xl sm:text-2xl font-bold text-amber-600 mt-1">0</h3>
+                        <p class="text-[10px] sm:text-xs text-amber-600/80 mt-1">Sửa chữa</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-lg sm:text-xl">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3.5 sm:p-5 border border-slate-200 shadow-sm flex items-center justify-between col-span-2 lg:col-span-1 hover:shadow-md transition">
+                    <div>
+                        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500">Tổng Giá Trị</p>
+                        <h3 id="kpiTotalValue" class="text-base sm:text-xl font-bold text-purple-700 mt-1">0 đ</h3>
+                        <p class="text-[10px] sm:text-xs text-purple-600 mt-1">Nguyên giá</p>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-lg sm:text-xl">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie text-brand-600"></i>
+                            <span>Phân Bố Theo Trạng Thái</span>
+                        </h3>
+                    </div>
+                    <div class="relative h-56 sm:h-64 flex items-center justify-center">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-column text-brand-600"></i>
+                            <span>Số Lượng Theo Phân Loại</span>
+                        </h3>
+                    </div>
+                    <div class="relative h-56 sm:h-64">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base">Thống Kê Chi Tiết Theo Loại Thiết Bị</h3>
+                        <p class="text-[11px] sm:text-xs text-slate-500">Đồng bộ trực tiếp từ Cloud</p>
+                    </div>
+                    <button onclick="openFormModal()" class="admin-only bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Thêm Thiết Bị Mới</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-600">
+                        <thead class="bg-slate-50 uppercase font-semibold text-slate-500 border-b border-slate-200">
+                            <tr>
+                                <th class="px-3 sm:px-6 py-3 whitespace-nowrap">Loại Thiết Bị</th>
+                                <th class="px-3 sm:px-6 py-3 text-center whitespace-nowrap">Tổng</th>
+                                <th class="px-3 sm:px-6 py-3 text-center whitespace-nowrap">Cấp</th>
+                                <th class="px-3 sm:px-6 py-3 text-center whitespace-nowrap">Kho</th>
+                                <th class="px-3 sm:px-6 py-3 text-center whitespace-nowrap">Bảo Trì</th>
+                                <th class="px-3 sm:px-6 py-3 text-right whitespace-nowrap">Giá Trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categorySummaryBody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-devices" class="tab-content hidden space-y-4">
+            <div class="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm space-y-3 md:space-y-0 md:flex md:items-center md:justify-between md:space-x-4">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" id="searchInput" oninput="renderDeviceTable()" placeholder="Tìm kiếm mã, tên, S/N, người dùng..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="filterCategory" onchange="renderDeviceTable()" class="bg-slate-50 border border-slate-300 text-slate-700 text-xs sm:text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 sm:flex-none">
+                        <option value="">Tất cả phân loại</option>
+                    </select>
+
+                    <select id="filterStatus" onchange="renderDeviceTable()" class="bg-slate-50 border border-slate-300 text-slate-700 text-xs sm:text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 sm:flex-none">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Sẵn sàng / Trong kho">Sẵn sàng / Trong kho</option>
+                        <option value="Đã cấp phát">Đã cấp phát</option>
+                        <option value="Đang sửa chữa / Bảo hành">Đang sửa chữa / Bảo hành</option>
+                        <option value="Đã thanh lý">Đã thanh lý</option>
+                    </select>
+                    
+                    <button onclick="openHandoverModalForSelected('handover')" class="admin-only bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition flex items-center space-x-1 shadow-sm">
+                        <i class="fa-solid fa-file-signature"></i>
+                        <span>Lập BB Bàn Giao (<span id="selectedDevCount">0</span>)</span>
+                    </button>
+
+                    <button onclick="openHandoverModalForSelected('recall')" class="admin-only bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-medium transition flex items-center space-x-1 shadow-sm">
+                        <i class="fa-solid fa-arrow-rotate-left"></i>
+                        <span>Lập BB Thu Hồi</span>
+                    </button>
+
+                    <button onclick="openFormModal()" class="admin-only bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center space-x-1 shadow-sm w-full sm:w-auto justify-center">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Thêm Mới</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-600">
+                        <thead class="bg-slate-800 text-white uppercase font-semibold">
+                            <tr>
+                                <th class="px-2 py-3 text-center w-8 admin-col">
+                                    <input type="checkbox" id="selectAllDevCb" onchange="toggleSelectAllDevices(this)" class="rounded text-brand-600 focus:ring-brand-500 cursor-pointer">
+                                </th>
+                                <th class="px-3 py-3 text-center w-10 whitespace-nowrap">STT</th>
+                                <th class="px-3 py-3 whitespace-nowrap">Mã TB</th>
+                                <th class="px-3 py-3 whitespace-nowrap min-w-[200px]">Tên Thiết Bị & Model</th>
+                                <th class="px-3 py-3 whitespace-nowrap">Loại TB</th>
+                                <th class="px-3 py-3 whitespace-nowrap">Số Serial / IMEI</th>
+                                <th class="px-3 py-3 text-center whitespace-nowrap">Trạng Thái</th>
+                                <th class="px-3 py-3 whitespace-nowrap">Người / Bộ Phận</th>
+                                <th class="px-3 py-3 whitespace-nowrap">Vị Trí Lưu Kho</th>
+                                <th class="px-3 py-3 text-right whitespace-nowrap">Nguyên Giá</th>
+                                <th class="px-3 py-3 text-center w-36 whitespace-nowrap admin-col">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceTableBody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] sm:text-xs text-slate-500 gap-2">
+                    <div>
+                        Hiển thị <span id="showingCount" class="font-bold text-slate-700">0</span> / <span id="totalCount" class="font-bold text-slate-700">0</span> thiết bị
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-block w-2.5 h-2.5 bg-emerald-100 border border-emerald-400 rounded-full"></span>
+                        <span>Đã cấp</span>
+                        <span class="inline-block w-2.5 h-2.5 bg-sky-100 border border-sky-400 rounded-full ml-1"></span>
+                        <span>Kho</span>
+                        <span class="inline-block w-2.5 h-2.5 bg-amber-100 border border-amber-400 rounded-full ml-1"></span>
+                        <span>Bảo hành</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-logs" class="tab-content hidden space-y-4 admin-only">
+            <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-brand-600"></i>
+                            <span>Lịch Sử Biến Động Tài Sản (Theo Ngày)</span>
+                        </h3>
+                        <p class="text-[11px] sm:text-xs text-slate-500">Lọc và kiểm tra biến động thiết bị theo từng ngày cụ thể</p>
+                    </div>
+                    <button onclick="clearLogs()" class="text-xs text-red-600 hover:text-red-800 font-medium border border-red-200 bg-red-50 px-3 py-1.5 rounded-lg transition self-start shadow-sm">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Xóa nhật ký
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                    <span class="font-bold text-slate-700 flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-day text-brand-600"></i> Chọn Ngày:
+                    </span>
+                    <input type="date" id="logDateFilter" onchange="renderLogsTable()" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    
+                    <button onclick="setLogDateFilter('today')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition">Hôm nay</button>
+                    <button onclick="setLogDateFilter('7days')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition">7 ngày qua</button>
+                    <button onclick="setLogDateFilter('all')" class="bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition">Tất cả</button>
+                    
+                    <div class="ml-auto text-slate-500 text-[11px]">
+                        Hiển thị: <b id="logCountDisplay" class="text-brand-700 font-mono">0</b> bản ghi nhật ký
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-600">
+                        <thead class="bg-slate-100 uppercase font-semibold text-slate-600">
+                            <tr>
+                                <th class="px-3 py-2.5 text-center whitespace-nowrap">Thời Gian</th>
+                                <th class="px-3 py-2.5 whitespace-nowrap">Thao Tác</th>
+                                <th class="px-3 py-2.5 whitespace-nowrap">Mã TB</th>
+                                <th class="px-3 py-2.5 whitespace-nowrap">Tên Thiết Bị</th>
+                                <th class="px-3 py-2.5 whitespace-nowrap">Đối Tượng</th>
+                                <th class="px-3 py-2.5 min-w-[180px]">Ghi Chú</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-reports" class="tab-content hidden space-y-6">
+            <div class="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="mb-5">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-file-export text-brand-600"></i>
+                        <span>Trung Tâm Báo Cáo & Trích Xuất File All-In-One</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">Lựa chọn định dạng để xuất toàn bộ danh sách thiết bị.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div class="border border-slate-200 rounded-xl p-4 sm:p-6 flex flex-col items-center text-center hover:shadow-lg hover:border-emerald-300 transition bg-white group cursor-pointer relative overflow-hidden" onclick="exportToExcelPro()">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-2xl sm:text-3xl mb-3 shadow-sm border border-emerald-200 group-hover:scale-110 transition">
+                            <i class="fa-solid fa-file-excel"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm sm:text-base">Báo Cáo Excel Tổng (.xlsx)</h4>
+                        <p class="text-xs text-slate-500 mt-1.5 mb-4">Trích xuất bảng tính đầy đủ cấu trúc cột chuẩn.</p>
+                        <button class="mt-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition shadow-md w-full flex justify-center items-center space-x-2">
+                            <i class="fa-solid fa-download"></i><span>Tải Xuống Excel</span>
+                        </button>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-xl p-4 sm:p-6 flex flex-col items-center text-center hover:shadow-lg hover:border-red-300 transition bg-white group cursor-pointer relative overflow-hidden" onclick="exportToPDF()">
+                        <div class="w-14 h-14 sm:w-16 sm:h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl sm:text-3xl mb-3 shadow-sm border border-red-200 group-hover:scale-110 transition">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm sm:text-base">Báo Cáo PDF Tổng (.pdf)</h4>
+                        <p class="text-xs text-slate-500 mt-1.5 mb-4">Tài liệu định dạng ngang chống lỗi font.</p>
+                        <button class="mt-auto bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition shadow-md w-full flex justify-center items-center space-x-2">
+                            <i class="fa-solid fa-download"></i><span>Tải Xuống PDF</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Drive Automated Backup Section -->
+            <div class="admin-only bg-gradient-to-br from-slate-900 via-slate-800 to-brand-950 text-white p-5 sm:p-6 rounded-2xl shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-base sm:text-lg">Trung Tâm Sao Lưu Google Drive Tự Động</h3>
+                            <p class="text-xs text-slate-400">Tài khoản sao lưu chỉ định: <code class="text-emerald-400 font-mono">nguyenmt1983@gmail.com</code> | Thư mục: <code class="text-emerald-400 font-mono">/Backup_Data</code></p>
+                        </div>
+                    </div>
+                    <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        Lịch 08:00 & 17:00 Đang Chạy
+                    </span>
+                </div>
+
+                <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 text-xs sm:text-sm space-y-2">
+                    <div class="flex items-center justify-between font-semibold text-emerald-400">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> Lịch sao lưu cố định 2 lần / ngày:</span>
+                        <span class="bg-brand-900/80 px-2 py-0.5 rounded border border-brand-500/40 font-mono text-white text-xs">Ca sáng: 08:00 | Ca chiều: 17:00</span>
+                    </div>
+                    <p class="text-slate-300 leading-relaxed text-xs">
+                        Hệ thống tự động kích hoạt tiến trình đóng gói toàn bộ danh sách thiết bị và lịch sử biến động thành file <code class="text-emerald-300 font-mono">Backup_Data_[Workspace]_[Date].json</code> để lưu vào thư mục <code class="text-emerald-300 font-mono">/Backup_Data</code> trên Google Drive của tài khoản <b>nguyenmt1983@gmail.com</b>.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <button onclick="backupToGoogleDriveFolder(false)" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/30">
+                        <i class="fa-solid fa-folder-plus text-base"></i>
+                        <span>Sao Lưu Nhanh Ngay Bây Giờ (Thư mục Drive)</span>
+                    </button>
+                    <label class="bg-slate-700 hover:bg-slate-600 text-white py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center space-x-2 shadow-md cursor-pointer">
+                        <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                        <span>Khôi Phục Dữ Liệu (Restore)</span>
+                        <input type="file" id="restoreFile" accept=".json" onchange="restoreFromBackupFile(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Xem Chi Tiết -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-800 text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-sm sm:text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-brand-400"></i>
+                    <span>Chi Tiết & Cấu Hình Sản Phẩm</span>
+                </h3>
+                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto custom-scrollbar flex-1" id="detailModalContent"></div>
+            <div class="px-4 py-3 sm:px-6 sm:py-4 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
+                <button onclick="closeDetailModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs sm:text-sm font-medium transition shadow-sm w-full sm:w-auto">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form Thêm/Sửa -->
+    <div id="formModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-2 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] my-auto">
+            <div class="bg-brand-700 text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between shrink-0">
+                <h3 id="modalTitle" class="font-bold text-sm sm:text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-pen-to-square text-brand-200"></i>
+                    <span>Thêm Mới Thiết Bị CNTT</span>
+                </h3>
+                <button onclick="closeFormModal()" class="text-brand-200 hover:text-white transition p-1">
+                    <i class="fa-solid fa-xmark text-lg sm:text-xl"></i>
+                </button>
+            </div>
+
+            <form id="deviceForm" onsubmit="handleFormSubmit(event)" class="p-3 sm:p-6 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                <input type="hidden" id="formId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Mã Thiết Bị (*)</label>
+                        <input type="text" id="formCode" required placeholder="VD: IT-LAP-001" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50 font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Loại Thiết Bị (*)</label>
+                        <select id="formCategory" onchange="toggleNewCategoryInput()" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium text-slate-700">
+                            <option value="Laptop">Laptop</option>
+                            <option value="PC / Máy tính bàn">PC / Máy tính bàn</option>
+                            <option value="Màn hình">Màn hình</option>
+                            <option value="Thiết bị mạng">Thiết bị mạng</option>
+                            <option value="Điện thoại IP">Điện thoại IP</option>
+                            <option value="Máy in & Thiết bị VP">Máy in & Thiết bị VP</option>
+                            <option value="Phụ kiện & Khác">Phụ kiện & Khác</option>
+                            <option value="add_new_category" class="font-bold text-brand-600 bg-brand-50">+ Thêm danh mục mới...</option>
+                        </select>
+                        <div id="newCategoryInputContainer" class="hidden mt-2 p-2 bg-brand-50 rounded-lg border border-brand-200">
+                            <label class="block text-[10px] font-bold text-brand-700 mb-1">Nhập Tên Loại Mới:</label>
+                            <input type="text" id="formNewCategory" placeholder="VD: Máy chiếu, Loa..." class="w-full px-2.5 py-1.5 border border-brand-300 rounded text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Tên Thiết Bị & Model (*)</label>
+                        <input type="text" id="formName" required placeholder="VD: Laptop Dell Latitude 5440 i7" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Số Serial / IMEI</label>
+                        <input type="text" id="formSerial" placeholder="VD: SN-9982310" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Trạng Thái (*)</label>
+                        <select id="formStatus" required onchange="toggleUserLocationFields()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium text-slate-700">
+                            <option value="Sẵn sàng / Trong kho">Sẵn sàng / Trong kho</option>
+                            <option value="Đã cấp phát">Đã cấp phát</option>
+                            <option value="Đang sửa chữa / Bảo hành">Đang sửa chữa / Bảo hành</option>
+                            <option value="Đã thanh lý">Đã thanh lý</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Người / Bộ Phận SD</label>
+                        <input type="text" id="formUser" placeholder="VD: Nguyễn Văn A - Kế toán" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Vị Trí Lưu Kho</label>
+                        <input type="text" id="formLocation" placeholder="VD: Kho tổng - Tủ A1" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Ngày Nhập/Cấp</label>
+                        <input type="date" id="formDateIn" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Nguyên Giá (VNĐ)</label>
+                        <input type="number" id="formValue" min="0" step="100000" placeholder="VD: 18500000" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] sm:text-xs font-bold uppercase text-slate-600 mb-1">Cấu Hình Chi Tiết / Ghi Chú</label>
+                        <textarea id="formNotes" rows="2.5" placeholder="Nhập thông số (CPU, RAM, Ổ cứng)..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 mt-2">
+                    <button type="button" onclick="closeFormModal()" class="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Hủy Bỏ</button>
+                    <button type="submit" class="w-full sm:w-auto px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs sm:text-sm font-bold transition shadow-md flex justify-center items-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i><span>LƯU DỮ LIỆU</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Sổ Tay Bảo Trì -->
+    <div id="maintenanceModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-purple-700 text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-xs sm:text-sm md:text-base flex items-center space-x-2 truncate">
+                    <i class="fa-solid fa-book-medical text-purple-200"></i>
+                    <span class="truncate">Sổ Tay: <span id="maintenanceDeviceName" class="font-mono text-purple-100"></span></span>
+                </h3>
+                <button onclick="closeMaintenanceModal()" class="text-purple-200 hover:text-white transition shrink-0 ml-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-3 sm:p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50 space-y-2" id="maintenanceList"></div>
+
+            <div class="p-3 sm:p-6 bg-white border-t border-slate-200 shrink-0">
+                <form id="maintenanceForm" onsubmit="submitMaintenanceForm(event)" class="space-y-2.5">
+                    <div class="text-[10px] sm:text-xs font-bold text-purple-700 uppercase flex items-center space-x-1.5"><i class="fa-solid fa-plus-circle"></i> <span>Thêm Ghi Chú Sửa Chữa Mới</span></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div class="sm:col-span-1">
+                            <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Ngày (*)</label>
+                            <input type="date" id="mntDate" required class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Chi Phí (VNĐ)</label>
+                            <input type="number" id="mntCost" min="0" step="1000" placeholder="VD: 500000" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none font-medium">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Nội Dung Sửa Chữa (*)</label>
+                            <input type="text" id="mntNote" required placeholder="VD: Thay pin, bảo dưỡng định kỳ..." class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-1">
+                        <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition shadow-md flex justify-center items-center space-x-1.5">
+                            <i class="fa-solid fa-thumbtack"></i><span>GHI SỔ TAY</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Biên Bản & Chứng Từ CNTT (Hỗ trợ 3 Mẫu: Bàn Giao, Thu Hồi & Kiểm Tra Kỹ Thuật) -->
+    <div id="handoverModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-2 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[95vh] my-auto">
+            
+            <!-- Modal Header & Document Type Selector -->
+            <div id="docModalHeader" class="bg-emerald-700 text-white px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 shrink-0 no-print">
+                <div class="flex items-center space-x-2">
+                    <i id="docModalHeaderIcon" class="fa-solid fa-file-signature text-emerald-200 text-lg"></i>
+                    <span id="docModalHeaderTitle" class="font-bold text-sm sm:text-base">Hệ Thống Biên Bản CNTT</span>
+                </div>
+
+                <!-- Tab Chuyển Đổi 3 Mẫu Biên Bản -->
+                <div class="flex items-center bg-black/20 p-1 rounded-xl space-x-1 text-xs font-medium">
+                    <button type="button" onclick="setDocumentType('handover')" id="docTypeBtn-handover" class="px-2.5 py-1 rounded-lg transition bg-white text-emerald-900 font-bold shadow-sm">
+                        <i class="fa-solid fa-file-contract mr-1"></i>Bàn Giao
+                    </button>
+                    <button type="button" onclick="setDocumentType('recall')" id="docTypeBtn-recall" class="px-2.5 py-1 rounded-lg transition text-white hover:bg-white/10">
+                        <i class="fa-solid fa-arrow-rotate-left mr-1"></i>Thu Hồi
+                    </button>
+                    <button type="button" onclick="setDocumentType('technical')" id="docTypeBtn-technical" class="px-2.5 py-1 rounded-lg transition text-white hover:bg-white/10">
+                        <i class="fa-solid fa-screwdriver-wrench mr-1"></i>Kiểm Tra KT
+                    </button>
+                </div>
+
+                <button onclick="closeHandoverModal()" class="text-white/80 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Nội dung mẫu phiếu (Có thể in ấn & Xuất PDF) -->
+            <div class="p-4 sm:p-7 overflow-y-auto custom-scrollbar flex-1 bg-white" id="printableHandoverForm">
+                
+                <!-- Header Logo Phoenix Golf Resort & Quốc Hiệu -->
+                <div class="border-b-2 border-emerald-700 pb-3 mb-4">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                        <div class="flex items-center space-x-3">
+                            <svg class="w-12 h-12 text-emerald-700 shrink-0" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="32" cy="32" r="30" fill="#047857" stroke="#F59E0B" stroke-width="2"/>
+                                <path d="M32 10C22 10 16 18 16 28C16 38 24 46 32 54C40 46 48 38 48 28C48 18 42 10 32 10Z" fill="#065F46" opacity="0.4"/>
+                                <path d="M32 14C24 22 18 26 12 24C18 32 24 34 32 48C40 34 46 32 52 24C46 26 40 22 32 14Z" fill="#F59E0B"/>
+                                <circle cx="32" cy="22" r="4" fill="#FFFFFF"/>
+                                <path d="M32 28L32 46" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+                                <path d="M26 50H38" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+                            </svg>
+                            <div>
+                                <h3 class="font-extrabold text-sm sm:text-base text-emerald-900 tracking-wide uppercase leading-tight">PHOENIX GOLF RESORT</h3>
+                                <p class="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase">CÔNG TY TNHH PHOENIX GOLF RESORT</p>
+                                <p class="text-[9px] text-slate-500 italic">Sân Golf Phượng Hoàng - Lương Sơn, Hòa Bình</p>
+                            </div>
+                        </div>
+
+                        <div class="text-center sm:text-right font-bold text-slate-800">
+                            <p class="uppercase text-[11px] sm:text-xs tracking-wider">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                            <p class="text-[10px] sm:text-[11px] underline text-slate-600">Độc lập - Tự do - Hạnh phúc</p>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3 pt-2 border-t border-slate-200">
+                        <h2 id="docMainTitle" class="text-base sm:text-xl uppercase text-slate-900 font-extrabold tracking-wide">BIÊN BẢN BÀN GIAO THIẾT BỊ CNTT</h2>
+                        <p class="text-[11px] text-slate-600 italic font-normal mt-0.5">
+                            Mã phiếu: <span id="hoFormCode" class="font-mono font-bold text-emerald-800">BG-20260815-001</span> | 
+                            Ngày lập: <input type="date" id="hoDate" class="font-bold text-slate-800 border-b border-slate-400 focus:outline-none bg-slate-50 px-1.5 py-0.5 rounded text-xs">
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Tách biệt chi tiết Bộ Phận, Chức Vụ -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-xs sm:text-sm bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="space-y-1.5">
+                        <p id="hoPartyATitle" class="font-bold text-emerald-800 uppercase text-[11px] border-b border-emerald-200 pb-1 mb-1"><i class="fa-solid fa-user-gear mr-1"></i> BÊN BÀN GIAO (BỘ PHẬN CNTT)</p>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Họ và tên:</span>
+                            <input type="text" id="hoAdminName" value="Nguyễn Văn Admin" class="font-semibold text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Bộ phận / Phòng:</span>
+                            <input type="text" id="hoAdminDept" value="Phòng Công Nghệ Thông Tin" class="font-semibold text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Chức vụ:</span>
+                            <input type="text" id="hoAdminPosition" value="Quản trị Hệ thống CNTT" class="font-semibold text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <p id="hoPartyBTitle" class="font-bold text-blue-800 uppercase text-[11px] border-b border-blue-200 pb-1 mb-1"><i class="fa-solid fa-user-check mr-1"></i> BÊN NHẬN BÀN GIAO (NGƯỜI SỬ DỤNG)</p>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Họ tên đối tượng (*):</span>
+                            <input type="text" id="hoUserName" placeholder="VD: Nguyễn Văn A" class="font-bold text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Bộ phận / Phòng (*):</span>
+                            <input type="text" id="hoUserDept" placeholder="VD: Phòng Kế toán" class="font-medium text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Chức vụ (*):</span>
+                            <input type="text" id="hoUserPosition" placeholder="VD: Chuyên viên Kế toán" class="font-medium text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="text-slate-500 w-28 shrink-0">Mã NV / Số ĐT:</span>
+                            <input type="text" id="hoUserCode" placeholder="VD: NV-0123" class="font-medium text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 w-full focus:ring-1 focus:ring-emerald-500 text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trường Thông Tin Bổ Sung Cho Thu Hồi & Kiểm Tra Kỹ Thuật -->
+                <div id="extraDocFields" class="mb-4 bg-amber-50/70 p-3 rounded-xl border border-amber-200 text-xs space-y-2 hidden">
+                    <div id="recallReasonContainer">
+                        <label class="font-bold text-amber-900 block mb-1"><i class="fa-solid fa-circle-exclamation mr-1"></i> Lý do thu hồi / Mô tả hiện trạng:</label>
+                        <input type="text" id="hoRecallReason" value="Cán bộ nhân viên thôi việc / Đổi máy mới theo kế hoạch định kỳ" class="w-full p-2 bg-white border border-amber-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-amber-500">
+                    </div>
+                    <div id="techDiagnosisContainer" class="hidden">
+                        <label class="font-bold text-purple-900 block mb-1"><i class="fa-solid fa-microchip mr-1"></i> Kết quả kiểm tra & Đề xuất xử lý kỹ thuật:</label>
+                        <input type="text" id="hoTechDiagnosis" value="Kiểm tra phát hiện lỗi phần cứng / Đề xuất gửi bảo hành nhà sản xuất" class="w-full p-2 bg-white border border-purple-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <!-- Danh Sách Thiết Bị Cột Số Lượng (Không có cột giá) -->
+                <div class="mb-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
+                        <p class="font-bold text-slate-800 text-xs sm:text-sm flex items-center">
+                            <i class="fa-solid fa-laptop text-emerald-600 mr-1.5"></i> Danh Mục Thiết Bị (<span id="hoDevListCount" class="text-emerald-700">0</span> thiết bị):
+                        </p>
+                        
+                        <div class="no-print flex items-center space-x-2 w-full sm:w-auto">
+                            <select id="hoDevicePicker" onchange="addDeviceToHandoverList(this.value)" class="bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500 max-w-xs">
+                                <option value="">+ Thêm thiết bị khác vào biên bản...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Bảng Chi Tiết Cột Số Lượng (Đã loại bỏ Nguyên giá) -->
+                    <div class="border border-slate-300 rounded-lg overflow-hidden text-xs">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-100 font-bold text-slate-700 uppercase border-b border-slate-300 text-[11px]">
+                                <tr>
+                                    <th class="p-2 text-center w-8 border-r border-slate-300">STT</th>
+                                    <th class="p-2 border-r border-slate-300 whitespace-nowrap">Mã Thiết Bị</th>
+                                    <th class="p-2 border-r border-slate-300 min-w-[140px]">Tên & Model Thiết Bị</th>
+                                    <th class="p-2 text-center w-16 border-r border-slate-300 whitespace-nowrap">Số Lượng</th>
+                                    <th class="p-2 border-r border-slate-300 whitespace-nowrap">Số Serial / IMEI</th>
+                                    <th id="hoColHeaderNotes" class="p-2 border-r border-slate-300 min-w-[180px]">Cấu Hình & Tình Trạng Ban Đầu</th>
+                                    <th class="p-2 text-center w-8 no-print">Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hoDeviceListBody" class="divide-y divide-slate-200 bg-white text-[11px]">
+                            </tbody>
+                            <tfoot class="bg-slate-50 font-bold border-t border-slate-300 text-slate-800 text-[11px]">
+                                <tr>
+                                    <td colspan="3" class="p-2 text-right uppercase">Tổng Số Lượng Thiết Bị:</td>
+                                    <td id="hoTotalQtySum" class="p-2 text-center font-bold text-emerald-800">0</td>
+                                    <td colspan="3" class="p-2 text-slate-500 font-normal italic">Căn cứ theo hiện trạng đối soát thực tế.</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="space-y-2 mb-5 text-xs">
+                    <div>
+                        <label class="font-bold text-slate-700 block mb-1">Phụ kiện & Vật tư đi kèm:</label>
+                        <input type="text" id="hoAccessories" value="Sạc nguyên bản theo máy, chuột máy tính, túi chống sốc" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-slate-800 focus:ring-1 focus:ring-emerald-500 text-xs">
+                    </div>
+
+                    <div id="docCommitmentBox" class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-slate-700 text-[11px] leading-relaxed">
+                        <p class="font-bold text-amber-900 mb-0.5"><i class="fa-solid fa-shield-halved mr-1"></i> Cam kết & Trách nhiệm:</p>
+                        <p id="docCommitmentText">- Người nhận có trách nhiệm bảo quản, giữ gìn và sử dụng tất cả thiết bị nêu trên đúng mục đích công việc của Công ty TNHH Phoenix Golf Resort.</p>
+                    </div>
+                </div>
+
+                <!-- Chữ ký 2 bên -->
+                <div class="grid grid-cols-2 gap-4 text-center mt-6 pt-3 border-t border-slate-300 text-xs sm:text-sm page-break-avoid">
+                    <div>
+                        <p id="hoSignLabelA" class="font-bold text-slate-800 uppercase">BÊN BÀN GIAO (IT)</p>
+                        <p class="text-[10px] text-slate-400 italic mb-12">(Ký và ghi rõ họ tên)</p>
+                        <p id="hoSignAdmin" class="font-bold text-slate-800">Nguyễn Văn Admin</p>
+                    </div>
+                    <div>
+                        <p id="hoSignLabelB" class="font-bold text-slate-800 uppercase">BÊN NHẬN BÀN GIAO</p>
+                        <p class="text-[10px] text-slate-400 italic mb-12">(Ký và ghi rõ họ tên)</p>
+                        <p id="hoSignUser" class="font-bold text-slate-800">....................................................</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Handover Export & Action Bar -->
+            <div class="p-3 sm:px-6 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0 no-print">
+                <button type="button" onclick="closeHandoverModal()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition">Đóng</button>
+
+                <div class="flex flex-wrap items-center space-x-1.5 sm:space-x-2">
+                    <button type="button" onclick="exportHandoverToPDF()" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center space-x-1">
+                        <i class="fa-solid fa-file-pdf"></i><span>Xuất PDF</span>
+                    </button>
+                    <button type="button" onclick="exportHandoverToExcel()" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center space-x-1">
+                        <i class="fa-solid fa-file-excel"></i><span>Xuất Excel</span>
+                    </button>
+                    <button type="button" onclick="printHandoverForm()" class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center space-x-1">
+                        <i class="fa-solid fa-print"></i><span>In Biên Bản</span>
+                    </button>
+                    <button type="button" onclick="submitAndPrintHandover()" id="btnSubmitDocAction" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-md flex items-center space-x-1">
+                        <i class="fa-solid fa-circle-check"></i><span id="btnSubmitDocText">Cập Nhật Cấp Phát & In</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Login / Phân Quyền -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/95 z-[100] flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full overflow-hidden">
+            <div class="bg-brand-600 p-5 sm:p-6 text-center">
+                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-brand-600 text-2xl sm:text-3xl mx-auto mb-3 shadow-lg">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 class="text-lg sm:text-xl font-bold text-white">Kết Nối Không Gian</h2>
+                <p class="text-brand-100 text-xs sm:text-sm mt-1">Đăng nhập để đồng bộ dữ liệu bảo mật</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="p-4 sm:p-6 space-y-4">
+                <div>
+                    <label class="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase mb-1">Mã Không Gian (Workspace ID)</label>
+                    <input type="text" id="loginWorkspace" required placeholder="VD: MYCOMPANY" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none font-mono font-bold text-brand-700 uppercase text-sm" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')">
+                    <p class="text-[10px] text-slate-500 mt-1">Nhập chung mã với đội ngũ để cùng xem dữ liệu.</p>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase mb-1">Vai Trò Của Bạn</label>
+                    <select id="loginRole" onchange="togglePasswordInput()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium text-slate-800 text-sm">
+                        <option value="viewer">Khách xem (Chỉ được xem & xuất báo cáo)</option>
+                        <option value="admin">Quản trị viên (Cần mật khẩu)</option>
+                    </select>
+                </div>
+
+                <div id="passwordContainer" class="hidden">
+                    <label class="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase mb-1">Mật Khẩu Quản Trị</label>
+                    <input type="password" id="loginPassword" placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm">
+                </div>
+
+                <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 sm:py-3 rounded-lg transition shadow-lg text-sm mt-2">
+                    TRUY CẬP HỆ THỐNG
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Đổi Mật Khẩu -->
+    <div id="changePasswordModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
+            <div class="bg-slate-800 text-white px-4 py-3 sm:py-4 flex items-center justify-between">
+                <h3 class="font-bold text-sm sm:text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-key text-brand-400"></i>
+                    <span>Đổi Mật Khẩu Quản Trị</span>
+                </h3>
+                <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="submitChangePassword(event)" class="p-4 sm:p-5 space-y-3.5">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mật khẩu hiện tại</label>
+                    <input type="password" id="cpCurrent" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mật khẩu mới</label>
+                    <input type="password" id="cpNew" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Xác nhận mật khẩu mới</label>
+                    <input type="password" id="cpConfirm" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-lg transition shadow-md text-xs sm:text-sm">
+                        Cập Nhật Mật Khẩu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="bg-white border-t border-slate-200 py-3 mt-auto">
+        <div class="max-w-7xl mx-auto px-3 text-center text-[11px] sm:text-xs text-slate-500 font-medium">
+            Hệ Thống Quản Lý Thiết Bị CNTT &copy; 2026 - Tích hợp Cloud Data Thời gian thực & Biểu Mẫu Chứng Từ
+        </div>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'it-asset-cloud-pro';
+        let firebaseConfig = {};
+        try { firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {}; } catch(e) {}
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth;
+        let userId = null;
+        let assets = [];
+        let logs = [];
+        let statusChartInstance = null;
+        let categoryChartInstance = null;
+        let currentMaintenanceDeviceId = null;
+        
+        // Document & Multi-device state tracking
+        let currentHandoverDeviceIds = [];
+        let currentDocType = 'handover'; // 'handover' | 'recall' | 'technical'
+
+        let currentWorkspace = localStorage.getItem('it_workspace_id') || null;
+        let currentUserRole = localStorage.getItem('it_user_role') || 'viewer';
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            initCharts();
+            if (app) await initCloudSystem();
+            checkAuthStatus();
+            
+            // Set up automatic backup schedule timer (08:00 & 17:00 check)
+            setInterval(checkAutoBackupTimer, 30000);
+        });
+
+        function checkAutoBackupTimer() {
+            if (currentUserRole !== 'admin' || !currentWorkspace) return;
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const dateStr = now.toISOString().split('T')[0];
+
+            let currentSlot = null;
+            if (hours === 8 && minutes <= 5) currentSlot = `${dateStr}_0800`;
+            if (hours === 17 && minutes <= 5) currentSlot = `${dateStr}_1700`;
+
+            const lastTriggered = localStorage.getItem('it_last_auto_backup_slot');
+            if (currentSlot && lastTriggered !== currentSlot) {
+                localStorage.setItem('it_last_auto_backup_slot', currentSlot);
+                backupToGoogleDriveFolder(true);
+            }
+        }
+
+        function checkAuthStatus() {
+            if (!currentWorkspace) {
+                document.getElementById('authModal').classList.remove('hidden');
+            } else {
+                document.getElementById('authModal').classList.add('hidden');
+                applyRoleRestrictions();
+                if (userId) setupFirestoreListeners();
+            }
+        }
+
+        function togglePasswordInput() {
+            const role = document.getElementById('loginRole').value;
+            const passContainer = document.getElementById('passwordContainer');
+            const passInput = document.getElementById('loginPassword');
+            if (role === 'admin') {
+                passContainer.classList.remove('hidden');
+                passInput.required = true;
+            } else {
+                passContainer.classList.add('hidden');
+                passInput.required = false;
+                passInput.value = '';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const ws = document.getElementById('loginWorkspace').value.trim();
+            const role = document.getElementById('loginRole').value;
+            const pass = document.getElementById('loginPassword').value;
+
+            if (ws.length < 3) return Swal.fire('Lỗi', 'Mã không gian phải từ 3 ký tự trở lên.', 'error');
+            
+            if (role === 'admin') {
+                if (!pass) return Swal.fire('Lỗi', 'Vui lòng nhập mật khẩu quản trị!', 'error');
+                
+                Swal.fire({ title: 'Đang xác thực...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                
+                let actualPassword = 'admin123';
+                if (db && userId) {
+                    try {
+                        const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `workspace_${ws}_settings`, 'config');
+                        const docSnap = await getDoc(settingsRef);
+                        if (docSnap.exists() && docSnap.data().adminPassword) {
+                            actualPassword = docSnap.data().adminPassword;
+                        }
+                    } catch (err) { console.error("Lỗi đọc mật khẩu:", err); }
+                }
+
+                if (pass !== actualPassword) {
+                    return Swal.fire('Từ chối truy cập', 'Mật khẩu quản trị viên không chính xác!', 'error');
+                }
+            }
+
+            currentWorkspace = ws;
+            currentUserRole = role;
+            localStorage.setItem('it_workspace_id', ws);
+            localStorage.setItem('it_user_role', role);
+
+            Swal.fire({
+                icon: 'success', 
+                title: role === 'admin' ? 'Xin chào Admin!' : 'Truy cập với quyền Khách',
+                text: `Đã kết nối vào không gian: ${ws}`,
+                timer: 1500, 
+                showConfirmButton: false
+            }).then(() => {
+                document.getElementById('loginPassword').value = '';
+                checkAuthStatus();
+            });
+        }
+
+        function logout() {
+            Swal.fire({
+                title: 'Đổi Phiên / Thoát?',
+                text: "Bạn sẽ thoát khỏi không gian làm việc hiện tại.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Đồng ý thoát'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('it_workspace_id');
+                    localStorage.removeItem('it_user_role');
+                    currentWorkspace = null;
+                    currentUserRole = 'viewer';
+                    document.getElementById('deviceTableBody').innerHTML = '';
+                    document.getElementById('authModal').classList.remove('hidden');
+                    assets = []; logs = [];
+                    renderAll();
+                }
+            });
+        }
+
+        function applyRoleRestrictions() {
+            const isAdmin = currentUserRole === 'admin';
+            document.getElementById('displayWorkspace').innerText = currentWorkspace;
+            const roleBadge = document.getElementById('roleBadge');
+            const roleIcon = document.getElementById('roleIcon');
+            const roleText = document.getElementById('roleText');
+            
+            if (isAdmin) {
+                roleBadge.className = "flex items-center space-x-1.5 bg-slate-800 border border-slate-700 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm";
+                roleIcon.className = "fa-solid fa-user-shield text-emerald-400";
+                roleText.innerText = "Admin (Toàn Quyền)";
+            } else {
+                roleBadge.className = "flex items-center space-x-1.5 bg-slate-100 border border-slate-300 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm text-slate-600";
+                roleIcon.className = "fa-solid fa-eye text-slate-500";
+                roleText.innerText = "Khách (Chỉ Xem)";
+                
+                if(!document.getElementById('view-logs').classList.contains('hidden')) {
+                    switchTab('dashboard');
+                }
+            }
+
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (isAdmin) {
+                    el.classList.remove('hidden');
+                    if(el.classList.contains('tab-btn')) el.style.display = 'flex';
+                } else {
+                    el.classList.add('hidden');
+                    if(el.classList.contains('tab-btn')) el.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('.admin-col').forEach(el => {
+                el.style.display = isAdmin ? '' : 'none';
+            });
+            
+            renderDeviceTable();
+        }
+
+        async function initCloudSystem() {
+            try {
+                if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                else await signInAnonymously(auth);
+                userId = auth.currentUser?.uid;
+            } catch (error) {
+                console.error("Auth error:", error);
+                Swal.fire('Offline', 'Không thể kết nối Cloud.', 'warning');
+            }
+        }
+
+        function setupFirestoreListeners() {
+            if (!userId || !currentWorkspace) return;
+
+            const devicesPath = `workspace_${currentWorkspace}_devices`;
+            const logsPath = `workspace_${currentWorkspace}_logs`;
+
+            const devicesRef = collection(db, 'artifacts', appId, 'public', 'data', devicesPath);
+            onSnapshot(devicesRef, (snapshot) => {
+                assets = [];
+                snapshot.forEach((doc) => { assets.push(doc.data()); });
+                assets.sort((a, b) => b.id.localeCompare(a.id));
+                renderAll();
+            }, (error) => { console.error("Lỗi Sync TB:", error); });
+
+            const logsRef = collection(db, 'artifacts', appId, 'public', 'data', logsPath);
+            onSnapshot(logsRef, (snapshot) => {
+                logs = [];
+                snapshot.forEach((doc) => { logs.push(doc.data()); });
+                logs.sort((a, b) => b.id.localeCompare(a.id));
+                if (currentUserRole === 'admin') renderLogsTable();
+            }, (error) => { console.error("Lỗi Sync Nhật ký:", error); });
+        }
+
+        async function logToCloud(action, code, name, target, notes) {
+            if (!userId || !currentWorkspace || currentUserRole !== 'admin') return;
+            const logId = Date.now().toString() + Math.floor(Math.random()*1000);
+            const logItem = { 
+                id: logId, 
+                time: new Date().toLocaleString("vi-VN"), 
+                isoDate: new Date().toISOString().split('T')[0],
+                action, code, name, target, notes 
+            };
+            
+            const logsPath = `workspace_${currentWorkspace}_logs`;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', logsPath, logId), logItem);
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+            document.querySelectorAll(".tab-btn").forEach(btn => {
+                btn.classList.remove("text-brand-600", "border-brand-600");
+                btn.classList.add("text-slate-500", "border-transparent");
+            });
+            document.getElementById(`view-${tabName}`).classList.remove("hidden");
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            activeBtn.classList.remove("text-slate-500", "border-transparent");
+            activeBtn.classList.add("text-brand-600", "border-brand-600");
+            if (tabName === 'dashboard') updateDashboardCharts();
+            if (tabName === 'logs') renderLogsTable();
+        }
+
+        function formatVND(amount) { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0); }
+
+        function renderAll() {
+            updateCategoryFilters();
+            renderDeviceTable();
+            renderDashboardKPIs();
+            renderCategorySummary();
+            updateDashboardCharts();
+            if (currentMaintenanceDeviceId && !document.getElementById('maintenanceModal').classList.contains('hidden')) {
+                renderMaintenanceList();
+            }
+        }
+
+        function updateCategoryFilters() {
+            const catSelect = document.getElementById("filterCategory");
+            const currentVal = catSelect.value;
+            const cats = [...new Set(assets.map(a => a.category))];
+            catSelect.innerHTML = '<option value="">Tất cả phân loại</option>';
+            const defaultCats = ['Laptop', 'PC / Máy tính bàn', 'Màn hình', 'Thiết bị mạng', 'Điện thoại IP', 'Máy in & Thiết bị VP', 'Phụ kiện & Khác'];
+            const allCats = [...new Set([...defaultCats, ...cats])];
+            allCats.forEach(c => catSelect.appendChild(new Option(c, c)));
+            catSelect.value = currentVal; 
+        }
+
+        function toggleSelectAllDevices(masterCb) {
+            const checkboxes = document.querySelectorAll('.device-select-cb');
+            checkboxes.forEach(cb => cb.checked = masterCb.checked);
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checkedCbs = document.querySelectorAll('.device-select-cb:checked');
+            const countSpan = document.getElementById('selectedDevCount');
+            if (countSpan) countSpan.innerText = checkedCbs.length;
+        }
+
+        function renderDeviceTable() {
+            const tbody = document.getElementById("deviceTableBody");
+            const searchVal = document.getElementById("searchInput").value.toLowerCase();
+            const catVal = document.getElementById("filterCategory").value;
+            const statusVal = document.getElementById("filterStatus").value;
+            const isAdmin = currentUserRole === 'admin';
+
+            let filtered = assets.filter(item => {
+                const matchSearch = item.code.toLowerCase().includes(searchVal) || item.name.toLowerCase().includes(searchVal) ||
+                                    (item.serial && item.serial.toLowerCase().includes(searchVal)) || (item.user && item.user.toLowerCase().includes(searchVal));
+                return matchSearch && (!catVal || item.category === catVal) && (!statusVal || item.status === statusVal);
+            });
+
+            tbody.innerHTML = "";
+            if (filtered.length === 0) {
+                const colSpan = isAdmin ? 11 : 9;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-10 text-slate-400 font-medium bg-slate-50"><i class="fa-solid fa-box-open text-2xl mb-2 block text-slate-300"></i>Không tìm thấy thiết bị</td></tr>`;
+            } else {
+                filtered.forEach((item, index) => {
+                    let badge = "";
+                    if (item.status === "Đã cấp phát") badge = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"><i class="fa-solid fa-circle text-[6px] mr-1 text-emerald-500"></i>Đã cấp</span>`;
+                    else if (item.status === "Sẵn sàng / Trong kho") badge = `<span class="bg-sky-100 text-sky-800 border border-sky-300 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"><i class="fa-solid fa-circle text-[6px] mr-1 text-sky-500"></i>Trong kho</span>`;
+                    else if (item.status === "Đang sửa chữa / Bảo hành") badge = `<span class="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"><i class="fa-solid fa-circle text-[6px] mr-1 text-amber-500"></i>Bảo hành</span>`;
+                    else badge = `<span class="bg-slate-100 text-slate-700 border border-slate-300 text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"><i class="fa-solid fa-circle text-[6px] mr-1 text-slate-400"></i>Thanh lý</span>`;
+
+                    let actionsHtml = '';
+                    if (isAdmin) {
+                        actionsHtml = `<td class="px-3 py-3 text-center space-x-1 admin-col whitespace-nowrap">
+                            <button onclick="openHandoverModal('${item.id}', 'handover')" title="Tạo phiếu bàn giao" class="bg-emerald-50 text-emerald-700 border border-emerald-200 p-1.5 rounded hover:bg-emerald-600 hover:text-white transition shadow-sm"><i class="fa-solid fa-file-signature"></i></button>
+                            <button onclick="openHandoverModal('${item.id}', 'technical')" title="Kiểm tra kỹ thuật" class="bg-purple-50 text-purple-700 border border-purple-200 p-1.5 rounded hover:bg-purple-600 hover:text-white transition shadow-sm"><i class="fa-solid fa-screwdriver-wrench"></i></button>
+                            ${item.status === "Đã cấp phát" ? `<button onclick="recallDevice('${item.id}')" title="Thu hồi nhanh" class="bg-amber-50 text-amber-700 border border-amber-200 p-1.5 rounded hover:bg-amber-500 hover:text-white transition shadow-sm"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
+                            <button onclick="openMaintenanceModal('${item.id}')" title="Sổ tay bảo trì" class="bg-blue-50 text-blue-700 border border-blue-200 p-1.5 rounded hover:bg-blue-500 hover:text-white transition shadow-sm"><i class="fa-solid fa-book-medical"></i></button>
+                            <button onclick="editDevice('${item.id}')" title="Sửa" class="bg-slate-100 text-slate-700 border border-slate-300 p-1.5 rounded hover:bg-slate-700 hover:text-white transition shadow-sm"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteDevice('${item.id}')" title="Xóa" class="bg-red-50 text-red-600 border border-red-200 p-1.5 rounded hover:bg-red-500 hover:text-white transition shadow-sm"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>`;
+                    }
+
+                    const checkboxCol = isAdmin ? `<td class="px-2 py-3 text-center admin-col"><input type="checkbox" class="device-select-cb rounded text-brand-600 focus:ring-brand-500 cursor-pointer" value="${item.id}" onchange="updateSelectedCount()"></td>` : '';
+
+                    const row = document.createElement("tr");
+                    row.className = "hover:bg-brand-50/50 border-b border-slate-100 transition";
+                    row.innerHTML = `
+                        ${checkboxCol}
+                        <td class="px-3 py-3 text-center text-slate-500 font-medium text-xs">${index + 1}</td>
+                        <td class="px-3 py-3 font-bold text-slate-900 font-mono text-xs sm:text-sm whitespace-nowrap">${item.code}</td>
+                        <td class="px-3 py-3 font-semibold text-brand-700 cursor-pointer group" onclick="showDeviceDetails('${item.id}')">
+                            <span class="group-hover:underline">${item.name}</span> <i class="fa-solid fa-circle-info text-[10px] text-brand-300 ml-1 group-hover:text-brand-500 transition"></i>
+                        </td>
+                        <td class="px-3 py-3 text-slate-600 text-xs sm:text-sm whitespace-nowrap">${item.category}</td>
+                        <td class="px-3 py-3 text-slate-500 font-mono text-xs whitespace-nowrap">${item.serial || '-'}</td>
+                        <td class="px-3 py-3 text-center">${badge}</td>
+                        <td class="px-3 py-3 text-slate-700 text-xs sm:text-sm font-medium whitespace-nowrap">${item.user || '-'}</td>
+                        <td class="px-3 py-3 text-slate-600 text-xs sm:text-sm whitespace-nowrap">${item.location || 'Kho'}</td>
+                        <td class="px-3 py-3 text-right font-bold text-slate-800 whitespace-nowrap">${formatVND(item.value)}</td>
+                        ${actionsHtml}
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            document.getElementById("showingCount").innerText = filtered.length;
+            document.getElementById("totalCount").innerText = assets.length;
+            document.getElementById("badgeTotalDevices").innerText = assets.length;
+            
+            const masterCb = document.getElementById('selectAllDevCb');
+            if (masterCb) masterCb.checked = false;
+            updateSelectedCount();
+        }
+
+        function renderDashboardKPIs() {
+            const total = assets.length;
+            const allocated = assets.filter(a => a.status === "Đã cấp phát").length;
+            document.getElementById("kpiTotal").innerText = total;
+            document.getElementById("kpiAllocated").innerText = allocated;
+            document.getElementById("kpiAllocatedPct").innerText = total > 0 ? `${Math.round((allocated/total)*100)}%` : '0%';
+            document.getElementById("kpiInStock").innerText = assets.filter(a => a.status === "Sẵn sàng / Trong kho").length;
+            document.getElementById("kpiRepair").innerText = assets.filter(a => a.status === "Đang sửa chữa / Bảo hành").length;
+            document.getElementById("kpiTotalValue").innerText = formatVND(assets.reduce((sum, a) => sum + (Number(a.value) || 0), 0));
+        }
+
+        function renderCategorySummary() {
+            const allCats = [...new Set([...['Laptop', 'PC / Máy tính bàn', 'Màn hình', 'Thiết bị mạng', 'Điện thoại IP', 'Máy in & Thiết bị VP', 'Phụ kiện & Khác'], ...new Set(assets.map(a => a.category))])];
+            const tbody = document.getElementById("categorySummaryBody");
+            tbody.innerHTML = "";
+
+            allCats.forEach(cat => {
+                const catAssets = assets.filter(a => a.category === cat);
+                if(catAssets.length === 0) return;
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="px-3 sm:px-6 py-2.5 font-semibold text-slate-800 text-xs sm:text-sm">${cat}</td>
+                    <td class="px-3 sm:px-6 py-2.5 text-center font-bold text-slate-900 text-xs sm:text-sm">${catAssets.length}</td>
+                    <td class="px-3 sm:px-6 py-2.5 text-center text-emerald-600 font-medium text-xs sm:text-sm">${catAssets.filter(a => a.status === "Đã cấp phát").length}</td>
+                    <td class="px-3 sm:px-6 py-2.5 text-center text-sky-600 font-medium text-xs sm:text-sm">${catAssets.filter(a => a.status === "Sẵn sàng / Trong kho").length}</td>
+                    <td class="px-3 sm:px-6 py-2.5 text-center text-amber-600 font-medium text-xs sm:text-sm">${catAssets.filter(a => a.status === "Đang sửa chữa / Bảo hành").length}</td>
+                    <td class="px-3 sm:px-6 py-2.5 text-right font-bold text-slate-800 text-xs sm:text-sm whitespace-nowrap">${formatVND(catAssets.reduce((sum, a) => sum + (Number(a.value) || 0), 0))}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function initCharts() {
+            const ctx1 = document.getElementById('statusChart').getContext('2d');
+            statusChartInstance = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Đã cấp phát', 'Trong kho', 'Bảo trì', 'Thanh lý'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#10b981', '#0ea5e9', '#f59e0b', '#64748b'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{font:{family:'Inter'}, boxWidth:12} } }, cutout: '65%' } });
+            const ctx2 = document.getElementById('categoryChart').getContext('2d');
+            categoryChartInstance = new Chart(ctx2, { type: 'bar', data: { labels: [], datasets: [{ label: 'Đã cấp', data: [], backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Trong kho', data: [], backgroundColor: '#0ea5e9', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid:{display:false} }, y: { stacked: true, beginAtZero: true } }, plugins:{legend:{position:'bottom', labels:{boxWidth:12}}} } });
+        }
+
+        function updateDashboardCharts() {
+            if (!statusChartInstance || !categoryChartInstance) return;
+            statusChartInstance.data.datasets[0].data = [assets.filter(a => a.status === "Đã cấp phát").length, assets.filter(a => a.status === "Sẵn sàng / Trong kho").length, assets.filter(a => a.status === "Đang sửa chữa / Bảo hành").length, assets.filter(a => a.status === "Đã thanh lý").length];
+            statusChartInstance.update();
+            const cats = [...new Set(assets.map(a => a.category))];
+            categoryChartInstance.data.labels = cats;
+            categoryChartInstance.data.datasets[0].data = cats.map(c => assets.filter(a => a.category === c && a.status === "Đã cấp phát").length);
+            categoryChartInstance.data.datasets[1].data = cats.map(c => assets.filter(a => a.category === c && a.status === "Sẵn sàng / Trong kho").length);
+            categoryChartInstance.update();
+        }
+
+        function setLogDateFilter(type) {
+            const dateInput = document.getElementById('logDateFilter');
+            const today = new Date().toISOString().split('T')[0];
+            if (type === 'today') {
+                dateInput.value = today;
+            } else if (type === 'all') {
+                dateInput.value = '';
+            } else if (type === '7days') {
+                dateInput.value = '';
+            }
+            renderLogsTable(type);
+        }
+
+        function renderLogsTable(specialFilter = null) {
+            const tbody = document.getElementById("logsTableBody");
+            const filterDate = document.getElementById("logDateFilter").value;
+            tbody.innerHTML = "";
+
+            let filteredLogs = [...logs];
+
+            if (filterDate) {
+                filteredLogs = filteredLogs.filter(log => {
+                    if (log.isoDate) return log.isoDate === filterDate;
+                    return log.time && log.time.includes(filterDate.split('-').reverse().join('/'));
+                });
+            } else if (specialFilter === '7days') {
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                filteredLogs = filteredLogs.filter(log => {
+                    const logDate = log.isoDate ? new Date(log.isoDate) : new Date();
+                    return logDate >= sevenDaysAgo;
+                });
+            }
+
+            document.getElementById('logCountDisplay').innerText = filteredLogs.length;
+
+            if (filteredLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-medium bg-slate-50"><i class="fa-solid fa-calendar-xmark text-xl block mb-1"></i>Không có nhật ký nào cho ngày đã chọn</td></tr>`;
+                return;
+            }
+
+            filteredLogs.forEach(log => {
+                let color = "bg-slate-100 text-slate-700";
+                if (log.action === "Thu hồi") color = "bg-amber-100 text-amber-800 border border-amber-300";
+                if (log.action === "Thêm mới") color = "bg-emerald-100 text-emerald-800 border border-emerald-300";
+                if (log.action === "Cập nhật" || log.action === "Bàn giao") color = "bg-blue-100 text-blue-800 border border-blue-300";
+                if (log.action === "Kiểm tra KT") color = "bg-purple-100 text-purple-800 border border-purple-300";
+                if (log.action === "Xóa") color = "bg-red-100 text-red-800 border border-red-300";
+
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50 border-b border-slate-100";
+                row.innerHTML = `
+                    <td class="px-3 py-2 text-center text-[10px] sm:text-xs font-medium text-slate-500 whitespace-nowrap">${log.time}</td>
+                    <td class="px-3 py-2 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${color}">${log.action}</span></td>
+                    <td class="px-3 py-2 font-mono text-xs font-bold text-slate-800 whitespace-nowrap">${log.code}</td>
+                    <td class="px-3 py-2 font-semibold text-slate-700 whitespace-nowrap">${log.name}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs sm:text-sm whitespace-nowrap">${log.target || '-'}</td>
+                    <td class="px-3 py-2 text-slate-500 text-xs min-w-[180px]">${log.notes || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showDeviceDetails(id) {
+            const item = assets.find(a => a.id === id);
+            if (!item) return;
+
+            let bClass = "bg-slate-100 text-slate-700 border-slate-300";
+            if (item.status === "Đã cấp phát") bClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
+            else if (item.status === "Sẵn sàng / Trong kho") bClass = "bg-sky-100 text-sky-800 border-sky-300";
+            else if (item.status === "Đang sửa chữa / Bảo hành") bClass = "bg-amber-100 text-amber-800 border-amber-300";
+
+            let historyHtml = '<em class="text-slate-400">Chưa có lịch sử bảo trì/sửa chữa.</em>';
+            if (item.maintenanceHistory && item.maintenanceHistory.length > 0) {
+                historyHtml = `<div class="space-y-2">` + item.maintenanceHistory.map(h => `
+                    <div class="bg-white p-2.5 rounded-lg border border-slate-200 text-xs shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-slate-700 text-[10px]"><i class="fa-regular fa-calendar text-slate-400 mr-1"></i> ${h.date}</span>
+                            ${h.cost ? `<span class="text-purple-600 font-bold text-[10px] bg-purple-50 px-1.5 py-0.5 rounded">${formatVND(h.cost)}</span>` : ''}
+                        </div>
+                        <div class="text-slate-600 leading-relaxed">${h.note}</div>
+                    </div>
+                `).join('') + `</div>`;
+            }
+
+            document.getElementById("detailModalContent").innerHTML = `
+                <div class="mb-2 pb-2 border-b border-slate-100">
+                    <h4 class="text-sm sm:text-lg font-bold text-slate-800 leading-tight mb-1">${item.name}</h4>
+                    <p class="text-[10px] sm:text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+                        <span class="bg-slate-100 px-2 py-0.5 rounded font-semibold">${item.category}</span> 
+                        Mã SP: <span class="font-mono text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded">${item.code}</span>
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex flex-col bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Số Serial / IMEI</span><span class="font-mono font-bold text-slate-900 break-all">${item.serial || '-'}</span></div>
+                    <div class="flex flex-col bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Trạng Thái</span><div><span class="text-[9px] px-2 py-0.5 rounded-full font-bold border ${bClass}">${item.status}</span></div></div>
+                    <div class="flex flex-col bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Người / Bộ Phận</span><span class="font-semibold text-brand-700 line-clamp-2">${item.user || '-'}</span></div>
+                    <div class="flex flex-col bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Vị Trí Lưu</span><span class="font-semibold text-slate-900 line-clamp-2">${item.location || '-'}</span></div>
+                    <div class="flex flex-col bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Ngày Nhập/Cấp</span><span class="font-medium text-slate-900">${item.dateIn || '-'}</span></div>
+                    <div class="flex flex-col bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Nguyên Giá</span><span class="font-bold text-purple-700">${formatVND(item.value)}</span></div>
+                </div>
+                
+                <div class="mt-2 pt-2 border-t border-slate-200">
+                    <div class="text-slate-500 text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1"><i class="fa-solid fa-book-medical"></i> Sổ Tay Bảo Trì:</div>
+                    <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 max-h-36 overflow-y-auto custom-scrollbar">${historyHtml}</div>
+                </div>
+                
+                <div class="mt-2 pt-2 border-t border-slate-200">
+                    <div class="text-slate-500 text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1"><i class="fa-solid fa-microchip"></i> Cấu Hình / Ghi Chú:</div>
+                    <div class="bg-brand-50 p-2.5 rounded-xl text-slate-700 text-xs border border-brand-200 whitespace-pre-line leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">${item.notes || '<em class="text-slate-400">Không có dữ liệu.</em>'}</div>
+                </div>
+            `;
+            document.getElementById("detailModal").classList.remove("hidden");
+        }
+
+        function closeDetailModal() { document.getElementById("detailModal").classList.add("hidden"); }
+
+        function openFormModal(editItem = null) {
+            if (currentUserRole !== 'admin') return;
+            
+            document.getElementById("deviceForm").reset();
+            document.getElementById("formId").value = "";
+            toggleNewCategoryInput();
+            
+            const catSelect = document.getElementById("formCategory");
+            const allCats = [...new Set([...['Laptop', 'PC / Máy tính bàn', 'Màn hình', 'Thiết bị mạng', 'Điện thoại IP', 'Máy in & Thiết bị VP', 'Phụ kiện & Khác'], ...new Set(assets.map(a => a.category))])];
+            Array.from(catSelect.options).forEach(opt => { if(opt.value !== "add_new_category" && !['Laptop', 'PC / Máy tính bàn', 'Màn hình', 'Thiết bị mạng', 'Điện thoại IP', 'Máy in & Thiết bị VP', 'Phụ kiện & Khác'].includes(opt.value)) opt.remove(); });
+            allCats.forEach(c => { if(!Array.from(catSelect.options).some(opt => opt.value === c)) catSelect.insertBefore(new Option(c, c), catSelect.lastElementChild); });
+
+            if (editItem) {
+                document.getElementById("modalTitle").innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-200"></i> <span>Cập Nhật ${editItem.code}</span>`;
+                ["Id", "Code", "Name", "Category", "Serial", "Status", "User", "Location", "DateIn", "Value", "Notes"].forEach(k => document.getElementById("form"+k).value = editItem[k.toLowerCase()] || (k==='Value'?0:""));
+            } else {
+                document.getElementById("modalTitle").innerHTML = `<i class="fa-solid fa-plus text-brand-200"></i> <span>Thêm Thiết Bị Mới</span>`;
+                document.getElementById("formCode").value = `IT-DEV-${String(assets.length + 1).padStart(3, '0')}`;
+                document.getElementById("formDateIn").value = new Date().toISOString().split('T')[0];
+            }
+            document.getElementById("formModal").classList.remove("hidden");
+        }
+
+        function closeFormModal() { document.getElementById("formModal").classList.add("hidden"); }
+        function editDevice(id) { if (currentUserRole === 'admin') { const item = assets.find(a => a.id === id); if(item) openFormModal(item); } }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (currentUserRole !== 'admin') return;
+
+            const id = document.getElementById("formId").value;
+            let category = document.getElementById("formCategory").value;
+            if (category === "add_new_category") {
+                category = document.getElementById("formNewCategory").value.trim();
+                if(!category) return Swal.fire('Lỗi', 'Vui lòng nhập tên loại thiết bị mới!', 'error');
+            }
+            const status = document.getElementById("formStatus").value;
+            
+            const payload = {
+                id: id || Date.now().toString(), code: document.getElementById("formCode").value.trim(), name: document.getElementById("formName").value.trim(), category,
+                serial: document.getElementById("formSerial").value.trim(), status,
+                user: document.getElementById("formUser").value.trim() || (status.includes("kho") ? "Kho" : ""),
+                location: document.getElementById("formLocation").value.trim() || "Kho",
+                dateIn: document.getElementById("formDateIn").value, value: Number(document.getElementById("formValue").value) || 0, notes: document.getElementById("formNotes").value.trim()
+            };
+
+            if (userId && currentWorkspace) {
+                try {
+                    Swal.fire({ title: 'Đang đẩy lên Đám mây...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    const devicesPath = `workspace_${currentWorkspace}_devices`;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, payload.id), payload);
+                    await logToCloud(!id ? "Thêm mới" : "Cập nhật", payload.code, payload.name, payload.user, !id ? "Đã thêm vào hệ thống" : "Đã sửa thông tin");
+                    Swal.fire({ icon: 'success', title: 'Thành Công!', timer: 1000, showConfirmButton: false });
+                    closeFormModal();
+                } catch (err) { Swal.fire('Lỗi', 'Mất kết nối Đám mây', 'error'); }
+            }
+        }
+
+        function recallDevice(id) {
+            if (currentUserRole !== 'admin') return;
+            const item = assets.find(a => a.id === id);
+            Swal.fire({ title: 'Thu Hồi Thiết Bị?', html: `Xác nhận thu hồi <b>${item.code}</b> từ <b>${item.user}</b> trả về Kho Tổng?`, icon: 'question', showCancelButton: true, confirmButtonColor: '#f59e0b', cancelButtonText: 'Hủy' }).then(async res => {
+                if(res.isConfirmed) {
+                    const prev = item.user;
+                    const updated = { ...item, status: "Sẵn sàng / Trong kho", user: "Kho tổng CNTT", location: "Kho tổng" };
+                    if (userId && currentWorkspace) {
+                        Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                        const devicesPath = `workspace_${currentWorkspace}_devices`;
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, updated.id), updated);
+                        await logToCloud("Thu hồi", item.code, item.name, "Kho tổng", `Từ ${prev}`);
+                        Swal.fire({ icon: 'success', title: 'Đã Thu Hồi', timer: 1000, showConfirmButton: false });
+                    }
+                }
+            });
+        }
+
+        async function deleteDevice(id) {
+            if (currentUserRole !== 'admin') return;
+            const item = assets.find(a => a.id === id);
+            
+            let actualPassword = 'admin123';
+            if (userId && currentWorkspace) {
+                try {
+                    const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `workspace_${currentWorkspace}_settings`, 'config');
+                    const docSnap = await getDoc(settingsRef);
+                    if (docSnap.exists() && docSnap.data().adminPassword) actualPassword = docSnap.data().adminPassword;
+                } catch (err) {}
+            }
+
+            const { value: password } = await Swal.fire({
+                title: 'Quyền Quản Trị', html: `Nhập mật khẩu Admin để xóa vĩnh viễn <b>${item.code}</b>.`,
+                input: 'password', inputPlaceholder: 'Mật khẩu...', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonText: 'Hủy',
+                inputValidator: (v) => { if (!v) return 'Cần nhập mật khẩu!'; if (v !== actualPassword) return 'Sai mật khẩu!'; }
+            });
+            if (password === actualPassword) {
+                if (userId && currentWorkspace) {
+                    Swal.fire({ title: 'Đang xóa trên Cloud...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    const devicesPath = `workspace_${currentWorkspace}_devices`;
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, id));
+                    await logToCloud("Xóa", item.code, item.name, "Hệ thống", "Đã xóa bằng quyền Admin");
+                    Swal.fire('Đã Xóa', 'Dữ liệu đã gỡ khỏi hệ thống', 'success');
+                }
+            }
+        }
+
+        function clearLogs() {
+            if (currentUserRole !== 'admin') return;
+            Swal.fire({ title: 'Xóa sạch nhật ký?', text: 'Dữ liệu trên Cloud sẽ bị xóa vĩnh viễn!', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Xóa sạch', cancelButtonText: 'Hủy' }).then(async res => {
+                if(res.isConfirmed) {
+                    if (userId && currentWorkspace) {
+                        Swal.fire({ title: 'Đang xóa...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                        const logsPath = `workspace_${currentWorkspace}_logs`;
+                        for (const log of logs) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', logsPath, log.id));
+                        Swal.fire('Thành công', 'Đã xóa lịch sử', 'success');
+                    }
+                }
+            });
+        }
+
+        function toggleNewCategoryInput() {
+            const cat = document.getElementById("formCategory"); const newCatDiv = document.getElementById("newCategoryInputContainer"); const newCatInput = document.getElementById("formNewCategory");
+            if (cat.value === "add_new_category") { newCatDiv.classList.remove("hidden"); newCatInput.required = true; newCatInput.focus(); } else { newCatDiv.classList.add("hidden"); newCatInput.required = false; newCatInput.value = ""; }
+        }
+        
+        function openMaintenanceModal(id) {
+            if (currentUserRole !== 'admin') return;
+            currentMaintenanceDeviceId = id;
+            const item = assets.find(a => a.id === id);
+            if(!item) return;
+            
+            document.getElementById('maintenanceDeviceName').innerText = `${item.code} - ${item.name}`;
+            document.getElementById('maintenanceForm').reset();
+            document.getElementById('mntDate').value = new Date().toISOString().split('T')[0];
+            
+            renderMaintenanceList();
+            document.getElementById('maintenanceModal').classList.remove('hidden');
+        }
+
+        function closeMaintenanceModal() {
+            document.getElementById('maintenanceModal').classList.add('hidden');
+            currentMaintenanceDeviceId = null;
+        }
+
+        function renderMaintenanceList() {
+            if (!currentMaintenanceDeviceId) return;
+            const item = assets.find(a => a.id === currentMaintenanceDeviceId);
+            const container = document.getElementById('maintenanceList');
+            if (!item || !item.maintenanceHistory || item.maintenanceHistory.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400 bg-white rounded-xl border border-slate-200 border-dashed text-xs"><i class="fa-solid fa-clipboard-check text-xl mb-1.5 block"></i>Chưa có lịch sử hỏng hóc/sửa chữa.</div>`;
+                return;
+            }
+
+            const sortedHistory = [...item.maintenanceHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            container.innerHTML = sortedHistory.map(h => `
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="bg-slate-100 text-slate-600 font-bold text-[10px] px-2 py-0.5 rounded uppercase tracking-wide"><i class="fa-regular fa-calendar mr-1"></i> ${h.date}</span>
+                            ${h.cost ? `<span class="bg-purple-100 text-purple-700 font-bold text-[10px] px-2 py-0.5 rounded">Phí: ${formatVND(h.cost)}</span>` : ''}
+                        </div>
+                        <p class="text-xs sm:text-sm font-medium text-slate-800">${h.note}</p>
+                    </div>
+                    <button onclick="deleteMaintenanceRecord('${h.id}')" title="Xóa ghi chú" class="shrink-0 text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition self-end sm:self-auto"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                </div>
+            `).join('');
+        }
+
+        async function submitMaintenanceForm(e) {
+            e.preventDefault();
+            if (currentUserRole !== 'admin' || !currentMaintenanceDeviceId) return;
+            const item = assets.find(a => a.id === currentMaintenanceDeviceId);
+            if(!item) return;
+
+            const date = document.getElementById('mntDate').value;
+            const note = document.getElementById('mntNote').value.trim();
+            const cost = Number(document.getElementById('mntCost').value) || 0;
+            const newRecord = { id: Date.now().toString(), date, note, cost };
+
+            const updatedItem = { ...item };
+            updatedItem.maintenanceHistory = updatedItem.maintenanceHistory || [];
+            updatedItem.maintenanceHistory.push(newRecord);
+
+            if (userId && currentWorkspace) {
+                try {
+                    Swal.fire({ title: 'Đang ghi sổ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    const devicesPath = `workspace_${currentWorkspace}_devices`;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, item.id), updatedItem);
+                    await logToCloud("Cập nhật", item.code, item.name, "Sổ tay bảo trì", `Đã thêm ghi chú sửa chữa: ${note}`);
+                    
+                    document.getElementById('maintenanceForm').reset();
+                    document.getElementById('mntDate').value = new Date().toISOString().split('T')[0];
+                    Swal.close();
+                } catch (err) {
+                    Swal.fire('Lỗi', 'Mất kết nối đám mây', 'error');
+                }
+            }
+        }
+
+        async function deleteMaintenanceRecord(recordId) {
+            if (currentUserRole !== 'admin' || !currentMaintenanceDeviceId) return;
+            
+            Swal.fire({ title: 'Xóa ghi chú này?', text: "Hành động này không thể hoàn tác!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonText: 'Hủy' }).then(async (res) => {
+                if (res.isConfirmed) {
+                    const item = assets.find(a => a.id === currentMaintenanceDeviceId);
+                    if(!item) return;
+
+                    const updatedItem = { ...item };
+                    updatedItem.maintenanceHistory = updatedItem.maintenanceHistory.filter(h => h.id !== recordId);
+
+                    if (userId && currentWorkspace) {
+                        Swal.fire({ title: 'Đang xóa...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                        const devicesPath = `workspace_${currentWorkspace}_devices`;
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, item.id), updatedItem);
+                        Swal.close();
+                    }
+                }
+            });
+        }
+
+        function setDocumentType(type) {
+            currentDocType = type;
+
+            const headerEl = document.getElementById('docModalHeader');
+            const headerIcon = document.getElementById('docModalHeaderIcon');
+            const headerTitle = document.getElementById('docModalHeaderTitle');
+            const docMainTitle = document.getElementById('docMainTitle');
+            
+            const btnHandover = document.getElementById('docTypeBtn-handover');
+            const btnRecall = document.getElementById('docTypeBtn-recall');
+            const btnTechnical = document.getElementById('docTypeBtn-technical');
+
+            const partyATitle = document.getElementById('hoPartyATitle');
+            const partyBTitle = document.getElementById('hoPartyBTitle');
+
+            const extraDocFields = document.getElementById('extraDocFields');
+            const recallReasonContainer = document.getElementById('recallReasonContainer');
+            const techDiagnosisContainer = document.getElementById('techDiagnosisContainer');
+
+            const colHeaderNotes = document.getElementById('hoColHeaderNotes');
+            const commitmentText = document.getElementById('docCommitmentText');
+
+            const signLabelA = document.getElementById('hoSignLabelA');
+            const signLabelB = document.getElementById('hoSignLabelB');
+
+            const submitBtnText = document.getElementById('btnSubmitDocText');
+            const submitBtn = document.getElementById('btnSubmitDocAction');
+
+            // Reset tab styles
+            [btnHandover, btnRecall, btnTechnical].forEach(b => {
+                b.className = "px-2.5 py-1 rounded-lg transition text-white hover:bg-white/10";
+            });
+
+            const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const randomCode = Math.floor(100 + Math.random() * 900);
+
+            if (type === 'handover') {
+                btnHandover.className = "px-2.5 py-1 rounded-lg transition bg-white text-emerald-900 font-bold shadow-sm";
+                headerEl.className = "bg-emerald-700 text-white px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 shrink-0 no-print";
+                headerIcon.className = "fa-solid fa-file-signature text-emerald-200 text-lg";
+                headerTitle.innerText = "Biên Bản Bàn Giao Thiết Bị CNTT";
+                docMainTitle.innerText = "BIÊN BẢN BÀN GIAO THIẾT BỊ CNTT";
+                document.getElementById('hoFormCode').innerText = `BG-${today}-${randomCode}`;
+
+                partyATitle.innerHTML = `<i class="fa-solid fa-user-gear mr-1"></i> BÊN BÀN GIAO (BỘ PHẬN CNTT)`;
+                partyBTitle.innerHTML = `<i class="fa-solid fa-user-check mr-1"></i> BÊN NHẬN BÀN GIAO (NGƯỜI SỬ DỤNG)`;
+
+                extraDocFields.classList.add('hidden');
+                colHeaderNotes.innerText = "Cấu Hình & Tình Trạng Ban Đầu";
+                commitmentText.innerText = "- Người nhận có trách nhiệm bảo quản, giữ gìn và sử dụng tất cả thiết bị nêu trên đúng mục đích công việc của Công ty TNHH Phoenix Golf Resort.";
+
+                signLabelA.innerText = "BÊN BÀN GIAO (IT)";
+                signLabelB.innerText = "BÊN NHẬN BÀN GIAO";
+
+                submitBtn.className = "px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-md flex items-center space-x-1";
+                submitBtnText.innerText = "Cập Nhật Cấp Phát & In";
+
+            } else if (type === 'recall') {
+                btnRecall.className = "px-2.5 py-1 rounded-lg transition bg-white text-amber-900 font-bold shadow-sm";
+                headerEl.className = "bg-amber-700 text-white px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 shrink-0 no-print";
+                headerIcon.className = "fa-solid fa-arrow-rotate-left text-amber-200 text-lg";
+                headerTitle.innerText = "Biên Bản Thu Hồi Thiết Bị CNTT";
+                docMainTitle.innerText = "BIÊN BẢN THU HỒI THIẾT BỊ CNTT";
+                document.getElementById('hoFormCode').innerText = `TH-${today}-${randomCode}`;
+
+                partyATitle.innerHTML = `<i class="fa-solid fa-user-xmark mr-1"></i> BÊN BÀN GIAO THU HỒI (NGƯỜI SỬ DỤNG)`;
+                partyBTitle.innerHTML = `<i class="fa-solid fa-warehouse mr-1"></i> BÊN TIẾP NHẬN THU HỒI (BỘ PHẬN CNTT)`;
+
+                extraDocFields.classList.remove('hidden');
+                recallReasonContainer.classList.remove('hidden');
+                techDiagnosisContainer.classList.add('hidden');
+
+                colHeaderNotes.innerText = "Hiện Trạng Khi Thu Hồi";
+                commitmentText.innerText = "- Hai bên đã kiểm tra đối soát, xác nhận bàn giao thu hồi đầy đủ thiết bị và phụ kiện nêu trên về Kho Tổng CNTT Công ty TNHH Phoenix Golf Resort.";
+
+                signLabelA.innerText = "BÊN BÀN GIAO (NGƯỜI TRẢ)";
+                signLabelB.innerText = "BÊN TIẾP NHẬN (IT)";
+
+                submitBtn.className = "px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow-md flex items-center space-x-1";
+                submitBtnText.innerText = "Cập Nhật Thu Hồi Kho & In";
+
+            } else if (type === 'technical') {
+                btnTechnical.className = "px-2.5 py-1 rounded-lg transition bg-white text-purple-900 font-bold shadow-sm";
+                headerEl.className = "bg-purple-700 text-white px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 shrink-0 no-print";
+                headerIcon.className = "fa-solid fa-screwdriver-wrench text-purple-200 text-lg";
+                headerTitle.innerText = "Biên Bản Kiểm Tra & Sự Cố Kỹ Thuật";
+                docMainTitle.innerText = "BIÊN BẢN KIỂM TRA & XỬ LÝ KỸ THUẬT CNTT";
+                document.getElementById('hoFormCode').innerText = `KT-${today}-${randomCode}`;
+
+                partyATitle.innerHTML = `<i class="fa-solid fa-user-gear mr-1"></i> CÁN BỘ KIỂM TRA KỸ THUẬT (IT)`;
+                partyBTitle.innerHTML = `<i class="fa-solid fa-building-user mr-1"></i> ĐƠN VỊ / NGƯỜI YÊU CẦU KIỂM TRA`;
+
+                extraDocFields.classList.remove('hidden');
+                recallReasonContainer.classList.add('hidden');
+                techDiagnosisContainer.classList.remove('hidden');
+
+                colHeaderNotes.innerText = "Chi Tiết Sự Cố / Tình Trạng Lỗi";
+                commitmentText.innerText = "- Kết quả kiểm tra kỹ thuật này được làm căn cứ thực hiện bảo hành, sửa chữa hoặc lập đề xuất thay thế/thanh lý thiết bị theo quy định.";
+
+                signLabelA.innerText = "CÁN BỘ KỸ THUẬT (IT)";
+                signLabelB.innerText = "ĐẠI DIỆN ĐƠN VỊ YÊU CẦU";
+
+                submitBtn.className = "px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition shadow-md flex items-center space-x-1";
+                submitBtnText.innerText = "Lưu Nhật Ký Kỹ Thuật & In";
+            }
+        }
+
+        function openHandoverModalForSelected(type = 'handover') {
+            if (currentUserRole !== 'admin') return;
+            const selectedCbs = document.querySelectorAll('.device-select-cb:checked');
+            if (selectedCbs.length === 0) {
+                return Swal.fire('Thông báo', 'Vui lòng tích chọn ít nhất một thiết bị từ danh sách!', 'warning');
+            }
+            const ids = Array.from(selectedCbs).map(cb => cb.value);
+            openHandoverModalWithIds(ids, type);
+        }
+
+        function openHandoverModal(id, type = 'handover') {
+            if (currentUserRole !== 'admin') return;
+            openHandoverModalWithIds([id], type);
+        }
+
+        function openHandoverModalWithIds(ids, type = 'handover') {
+            if (currentUserRole !== 'admin' || !ids || ids.length === 0) return;
+            currentHandoverDeviceIds = [...ids];
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('hoDate').value = today;
+            
+            const firstDev = assets.find(a => a.id === currentHandoverDeviceIds[0]);
+            
+            const userNameInput = document.getElementById('hoUserName');
+            const userDeptInput = document.getElementById('hoUserDept');
+            const userPosInput = document.getElementById('hoUserPosition');
+            const userCodeInput = document.getElementById('hoUserCode');
+            
+            if (firstDev && firstDev.user && firstDev.user !== 'Kho tổng CNTT' && firstDev.user !== 'Kho') {
+                userNameInput.value = firstDev.user;
+            } else {
+                userNameInput.value = '';
+            }
+            
+            userDeptInput.value = firstDev && firstDev.location && firstDev.location !== 'Kho' ? firstDev.location : '';
+            userPosInput.value = '';
+            userCodeInput.value = '';
+
+            userNameInput.oninput = (e) => {
+                document.getElementById('hoSignUser').innerText = e.target.value.trim() || '....................................................';
+            };
+            document.getElementById('hoAdminName').oninput = (e) => {
+                document.getElementById('hoSignAdmin').innerText = e.target.value.trim() || 'Nguyễn Văn Admin';
+            };
+
+            document.getElementById('hoSignUser').innerText = userNameInput.value.trim() || '....................................................';
+
+            setDocumentType(type);
+            renderHandoverModalDeviceList();
+            document.getElementById('handoverModal').classList.remove('hidden');
+        }
+
+        function addDeviceToHandoverList(id) {
+            if (!id) return;
+            if (!currentHandoverDeviceIds.includes(id)) {
+                currentHandoverDeviceIds.push(id);
+                renderHandoverModalDeviceList();
+            }
+        }
+
+        function removeDeviceFromHandoverList(id) {
+            if (!id) return;
+            currentHandoverDeviceIds = currentHandoverDeviceIds.filter(devId => devId !== id);
+            renderHandoverModalDeviceList();
+        }
+
+        function closeHandoverModal() {
+            document.getElementById('handoverModal').classList.add('hidden');
+            currentHandoverDeviceIds = [];
+        }
+
+        function printHandoverForm() {
+            window.print();
+        }
+
+        function renderHandoverModalDeviceList() {
+            const tbody = document.getElementById('hoDeviceListBody');
+            const pickerSelect = document.getElementById('hoDevicePicker');
+            const countDisplay = document.getElementById('hoDevListCount');
+            const totalQtyDisplay = document.getElementById('hoTotalQtySum');
+
+            tbody.innerHTML = '';
+            let totalQty = 0;
+
+            currentHandoverDeviceIds.forEach((id, index) => {
+                const item = assets.find(a => a.id === id);
+                if (!item) return;
+
+                totalQty += 1;
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="p-2 text-center font-bold text-slate-500 border-r border-slate-200">${index + 1}</td>
+                    <td class="p-2 font-mono font-bold text-slate-900 border-r border-slate-200">${item.code}</td>
+                    <td class="p-2 font-semibold text-brand-700 border-r border-slate-200">
+                        ${item.name}
+                        <div class="text-[10px] text-slate-500 font-normal">${item.category}</div>
+                    </td>
+                    <td class="p-2 text-center font-bold text-slate-800 border-r border-slate-200">1</td>
+                    <td class="p-2 font-mono text-slate-700 border-r border-slate-200">${item.serial || '-'}</td>
+                    <td class="p-2 text-slate-700 leading-tight border-r border-slate-200">${item.notes || 'Cấu hình tiêu chuẩn, hoạt động tốt'}</td>
+                    <td class="p-2 text-center no-print">
+                        ${currentHandoverDeviceIds.length > 1 ? `<button onclick="removeDeviceFromHandoverList('${item.id}')" title="Xóa khỏi biên bản" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            countDisplay.innerText = currentHandoverDeviceIds.length;
+            totalQtyDisplay.innerText = totalQty;
+
+            pickerSelect.innerHTML = '<option value="">+ Thêm thiết bị khác vào biên bản...</option>';
+            assets.filter(a => !currentHandoverDeviceIds.includes(a.id)).forEach(dev => {
+                pickerSelect.appendChild(new Option(`[${dev.code}] ${dev.name}`, dev.id));
+            });
+        }
+
+        function exportHandoverToPDF() {
+            if (typeof window.jspdf === "undefined") return Swal.fire('Lỗi', 'Đang tải thư viện PDF', 'error');
+            const formCode = document.getElementById('hoFormCode').innerText;
+            const hoDate = document.getElementById('hoDate').value;
+            const adminName = document.getElementById('hoAdminName').value;
+            const adminDept = document.getElementById('hoAdminDept').value;
+            const adminPos = document.getElementById('hoAdminPosition').value;
+            
+            const userName = document.getElementById('hoUserName').value || "N/A";
+            const userDept = document.getElementById('hoUserDept').value || "N/A";
+            const userPos = document.getElementById('hoUserPosition').value || "N/A";
+            const userCode = document.getElementById('hoUserCode').value || "N/A";
+            const accessories = document.getElementById('hoAccessories').value;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            let titleText = "BIEN BAN BAN GIAO THIET BI CNTT";
+            let labelA = "BEN BAN GIAO (CNTT)";
+            let labelB = "BEN NHAN BAN GIAO (NGUOI SD)";
+            if (currentDocType === 'recall') {
+                titleText = "BIEN BAN THU HOI THIET BI CNTT";
+                labelA = "BEN BAN GIAO THU HOI (NGUOI SD)";
+                labelB = "BEN TIEP NHAN THU HOI (IT)";
+            } else if (currentDocType === 'technical') {
+                titleText = "BIEN BAN KIEM TRA & XU LY KY THUAT CNTT";
+                labelA = "CAN BO KIEM TRA KY THUAT (IT)";
+                labelB = "DON VI YEU CAU KIEM TRA";
+            }
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(4, 120, 87);
+            doc.text("PHOENIX GOLF RESORT", 14, 12);
+            doc.setFontSize(8);
+            doc.setTextColor(71, 85, 105);
+            doc.text("CONG TY TNHH PHOENIX GOLF RESORT - LUONG SON, HOA BINH", 14, 16);
+
+            doc.setFontSize(9);
+            doc.setTextColor(15, 23, 42);
+            doc.text("CONG HOA XA HOI CHU NGHIA VIET NAM", 196, 12, { align: "right" });
+            doc.text("Doc lap - Tu do - Hanh phuc", 196, 16, { align: "right" });
+
+            doc.setFontSize(13);
+            doc.setTextColor(15, 23, 42);
+            doc.text(titleText, 105, 25, { align: "center" });
+            
+            doc.setFontSize(8.5);
+            doc.text(removeVietnameseTones(`Ma phieu: ${formCode}  |  Ngay: ${hoDate}`), 105, 30, { align: "center" });
+
+            doc.autoTable({
+                startY: 34,
+                head: [[labelA, labelB]],
+                body: [
+                    [
+                        `Ho ten: ${removeVietnameseTones(adminName)}\nBo phan: ${removeVietnameseTones(adminDept)}\nChuc vu: ${removeVietnameseTones(adminPos)}`, 
+                        `Ho ten: ${removeVietnameseTones(userName)}\nBo phan: ${removeVietnameseTones(userDept)}\nChuc vu: ${removeVietnameseTones(userPos)}\nMa NV/SDT: ${removeVietnameseTones(userCode)}`
+                    ]
+                ],
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: currentDocType === 'recall' ? [180, 83, 9] : (currentDocType === 'technical' ? [126, 34, 206] : [4, 120, 87]) },
+                margin: { left: 14, right: 14 }
+            });
+
+            const deviceRows = currentHandoverDeviceIds.map((id, index) => {
+                const dev = assets.find(a => a.id === id);
+                return [
+                    index + 1,
+                    removeVietnameseTones(dev ? dev.code : ''),
+                    removeVietnameseTones(dev ? `${dev.name}\n(${dev.category})` : ''),
+                    1,
+                    removeVietnameseTones(dev ? (dev.serial || '-') : '-'),
+                    removeVietnameseTones(dev ? (dev.notes || 'Hoat dong tot') : 'Hoat dong tot')
+                ];
+            });
+
+            deviceRows.push(['', '', 'TONG CONG SO LUONG', `${currentHandoverDeviceIds.length} Thiet bi`, '', '']);
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 3,
+                head: [['STT', 'Ma TB', 'Ten & Model', 'So Luong', 'Serial / IMEI', 'Cau Hinh / Tinh Trang']],
+                body: deviceRows,
+                styles: { fontSize: 7.5, cellPadding: 2 },
+                headStyles: { fillColor: [15, 118, 110] },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 26, fontStyle: 'bold' },
+                    2: { cellWidth: 48 },
+                    3: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+                    4: { cellWidth: 32 },
+                    5: { cellWidth: 48 }
+                },
+                margin: { left: 14, right: 14 }
+            });
+
+            let finalY = doc.lastAutoTable.finalY + 5;
+            doc.setFontSize(8);
+            doc.text(removeVietnameseTones(`Phu kien kem theo: ${accessories}`), 14, finalY);
+
+            finalY += 12;
+            doc.setFontSize(9);
+            doc.text(removeVietnameseTones(labelA), 45, finalY, { align: "center" });
+            doc.text(removeVietnameseTones(labelB), 155, finalY, { align: "center" });
+            doc.text(removeVietnameseTones(adminName), 45, finalY + 20, { align: "center" });
+            doc.text(removeVietnameseTones(userName), 155, finalY + 20, { align: "center" });
+
+            doc.save(`${formCode}.pdf`);
+            if(currentUserRole === 'admin') logToCloud("Xuất file", formCode, "Biên bản chứng từ", userName, `Xuất file PDF cho ${currentHandoverDeviceIds.length} thiết bị`);
+        }
+
+        function exportHandoverToExcel() {
+            if (typeof XLSX === "undefined") return Swal.fire('Lỗi', 'Đang tải thư viện Excel', 'error');
+            const formCode = document.getElementById('hoFormCode').innerText;
+            const hoDate = document.getElementById('hoDate').value;
+            const adminName = document.getElementById('hoAdminName').value;
+            const adminDept = document.getElementById('hoAdminDept').value;
+            const adminPos = document.getElementById('hoAdminPosition').value;
+
+            const userName = document.getElementById('hoUserName').value || "Chưa nhận";
+            const userDept = document.getElementById('hoUserDept').value || "N/A";
+            const userPos = document.getElementById('hoUserPosition').value || "N/A";
+            const userCode = document.getElementById('hoUserCode').value || "N/A";
+            const accessories = document.getElementById('hoAccessories').value;
+
+            let docTitle = "BIÊN BẢN BÀN GIAO THIẾT BỊ CNTT";
+            if (currentDocType === 'recall') docTitle = "BIÊN BẢN THU HỒI THIẾT BỊ CNTT";
+            if (currentDocType === 'technical') docTitle = "BIÊN BẢN KIỂM TRA & XỬ LÝ KỸ THUẬT CNTT";
+
+            const sheetData = [
+                ["CÔNG TY TNHH PHOENIX GOLF RESORT"],
+                ["CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM - Độc lập - Tự do - Hạnh phúc"],
+                [""],
+                [docTitle],
+                [`Mã phiếu: ${formCode}`, `Ngày: ${hoDate}`],
+                [""],
+                ["THÔNG TIN BÊN GIAO / IT", "", "THÔNG TIN BÊN NHẬN / ĐƠN VỊ"],
+                ["Họ và tên:", adminName, "Họ và tên:", userName],
+                ["Bộ phận:", adminDept, "Bộ phận:", userDept],
+                ["Chức vụ:", adminPos, "Chức vụ:", userPos],
+                ["", "", "Mã NV/SĐT:", userCode],
+                [""],
+                ["DANH SÁCH THIẾT BỊ"],
+                ["STT", "Mã Thiết Bị", "Tên & Model Thiết Bị", "Số Lượng", "Số Serial / IMEI", "Cấu Hình & Tình Trạng"]
+            ];
+
+            currentHandoverDeviceIds.forEach((id, index) => {
+                const dev = assets.find(a => a.id === id);
+                if (dev) {
+                    sheetData.push([index + 1, dev.code, `${dev.name} (${dev.category})`, 1, dev.serial || '-', dev.notes || 'Cấu hình tiêu chuẩn, hoạt động tốt']);
+                }
+            });
+
+            sheetData.push(["", "", "TỔNG CỘNG SỐ LƯỢNG", currentHandoverDeviceIds.length, "", ""]);
+            sheetData.push([""]);
+            sheetData.push(["Phụ kiện kèm theo:", accessories]);
+            sheetData.push([""]);
+            sheetData.push(["Chữ ký Bên Giao / IT", "", "", "Chữ ký Bên Nhận / Đơn vị"]);
+            sheetData.push([adminName, "", "", userName]);
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [{wch: 8}, {wch: 18}, {wch: 32}, {wch: 12}, {wch: 22}, {wch: 40}];
+            XLSX.utils.book_append_sheet(wb, ws, "BienBan");
+            XLSX.writeFile(wb, `${formCode}.xlsx`);
+
+            if(currentUserRole === 'admin') logToCloud("Xuất file", formCode, "Biên bản chứng từ", userName, `Xuất Excel cho ${currentHandoverDeviceIds.length} thiết bị`);
+        }
+
+        async function submitAndPrintHandover() {
+            if (currentUserRole !== 'admin' || currentHandoverDeviceIds.length === 0) return;
+
+            const newUserName = document.getElementById('hoUserName').value.trim();
+            const newDept = document.getElementById('hoUserDept').value.trim();
+            const newPos = document.getElementById('hoUserPosition').value.trim();
+
+            if (!newUserName && currentDocType !== 'technical') return Swal.fire('Lỗi', 'Vui lòng nhập Họ tên Người nhận / Người bàn giao!', 'error');
+
+            const fullLocation = newPos ? `${newDept} (${newPos})` : (newDept || "Kho tổng");
+
+            if (userId && currentWorkspace) {
+                try {
+                    Swal.fire({ title: 'Đang lưu Cloud & Tạo lệnh in...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    const devicesPath = `workspace_${currentWorkspace}_devices`;
+
+                    for (const id of currentHandoverDeviceIds) {
+                        const item = assets.find(a => a.id === id);
+                        if (item) {
+                            let updatedItem = { ...item };
+                            let actionName = "Bàn giao";
+                            let targetName = newUserName;
+                            let noteMsg = `Lập biên bản bàn giao ${document.getElementById('hoFormCode').innerText}`;
+
+                            if (currentDocType === 'handover') {
+                                updatedItem.status = "Đã cấp phát";
+                                updatedItem.user = newUserName;
+                                updatedItem.location = fullLocation;
+                            } else if (currentDocType === 'recall') {
+                                actionName = "Thu hồi";
+                                targetName = "Kho tổng CNTT";
+                                const reason = document.getElementById('hoRecallReason').value;
+                                noteMsg = `Thu hồi từ ${item.user}: ${reason}`;
+                                updatedItem.status = "Sẵn sàng / Trong kho";
+                                updatedItem.user = "Kho tổng CNTT";
+                                updatedItem.location = "Kho tổng";
+                            } else if (currentDocType === 'technical') {
+                                actionName = "Kiểm tra KT";
+                                const diag = document.getElementById('hoTechDiagnosis').value;
+                                noteMsg = `Kiểm tra KT: ${diag}`;
+                                updatedItem.status = "Đang sửa chữa / Bảo hành";
+                            }
+
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, item.id), updatedItem);
+                            await logToCloud(actionName, item.code, item.name, targetName, noteMsg);
+                        }
+                    }
+
+                    Swal.close();
+                    window.print();
+                } catch (err) {
+                    Swal.fire('Lỗi', 'Không thể kết nối lưu trữ đám mây', 'error');
+                }
+            } else {
+                window.print();
+            }
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('cpCurrent').value = '';
+            document.getElementById('cpNew').value = '';
+            document.getElementById('cpConfirm').value = '';
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+        }
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        }
+        async function submitChangePassword(e) {
+            e.preventDefault();
+            const currentPass = document.getElementById('cpCurrent').value;
+            const newPass = document.getElementById('cpNew').value;
+            const confirmPass = document.getElementById('cpConfirm').value;
+
+            if (newPass !== confirmPass) return Swal.fire('Lỗi', 'Mật khẩu mới không khớp!', 'error');
+            if (newPass.length < 5) return Swal.fire('Lỗi', 'Mật khẩu phải từ 5 ký tự trở lên!', 'error');
+
+            Swal.fire({ title: 'Đang kiểm tra...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            let actualPassword = 'admin123';
+            const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `workspace_${currentWorkspace}_settings`, 'config');
+            try {
+                const docSnap = await getDoc(settingsRef);
+                if (docSnap.exists() && docSnap.data().adminPassword) actualPassword = docSnap.data().adminPassword;
+            } catch (err) {}
+
+            if (currentPass !== actualPassword) return Swal.fire('Lỗi', 'Mật khẩu hiện tại không đúng!', 'error');
+
+            try {
+                await setDoc(settingsRef, { adminPassword: newPass }, { merge: true });
+                Swal.fire('Thành công', 'Đã cập nhật mật khẩu mới!', 'success');
+                closeChangePasswordModal();
+            } catch (err) {
+                Swal.fire('Lỗi', 'Không thể lưu mật khẩu', 'error');
+            }
+        }
+
+        function backupToGoogleDriveFolder(isAutomated = false) {
+            if (currentUserRole !== 'admin') return;
+            const backupData = {
+                workspace: currentWorkspace,
+                account: "nguyenmt1983@gmail.com",
+                targetFolder: "/Backup_Data",
+                backupTime: new Date().toISOString(),
+                scheduleSlot: isAutomated ? "Automated 08:00/17:00" : "Manual trigger",
+                devices: assets,
+                logs: logs
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const dateStr = new Date().toISOString().split('T')[0];
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Backup_Data_${currentWorkspace}_${dateStr}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            Swal.fire({
+                icon: 'success',
+                title: isAutomated ? 'Lịch Sao Lưu Tự Động (08:00/17:00)' : 'Đã Tạo File Sao Lưu!',
+                text: 'Hãy chọn lưu tệp này vào thư mục Backup_Data trên Google Drive (nguyenmt1983@gmail.com).',
+                timer: 3500
+            });
+            logToCloud("Sao lưu", "SYS", "Google Drive Backup", "Thư mục Backup_Data", isAutomated ? "Tự động sao lưu theo lịch 08:00/17:00" : "Sao lưu thủ công thành công");
+        }
+
+        function restoreFromBackupFile(event) {
+            if (currentUserRole !== 'admin') return;
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!parsed.devices || !Array.isArray(parsed.devices)) {
+                        throw new Error("File không hợp lệ");
+                    }
+
+                    Swal.fire({
+                        title: 'Khôi phục dữ liệu?',
+                        text: `Bạn có chắc chắn muốn nạp dữ liệu từ file backup không? Hành động này sẽ thay thế toàn bộ dữ liệu hiện tại của không gian ${currentWorkspace}.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Đồng ý khôi phục'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({ title: 'Đang đồng bộ lên Cloud...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                            
+                            const devicesPath = `workspace_${currentWorkspace}_devices`;
+                            for (const dev of parsed.devices) {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', devicesPath, dev.id), dev);
+                            }
+
+                            Swal.fire('Thành công!', 'Dữ liệu đã được khôi phục hoàn tất.', 'success');
+                        }
+                    });
+                } catch (err) {
+                    Swal.fire('Lỗi', 'Tệp tin sao lưu không đúng định dạng!', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function toggleUserLocationFields() { if (document.getElementById("formStatus").value === "Sẵn sàng / Trong kho") { document.getElementById("formUser").value = "Kho tổng CNTT"; if (!document.getElementById("formLocation").value) document.getElementById("formLocation").value = "Kho tổng"; } }
+
+        function removeVietnameseTones(str) {
+            if(!str) return ""; str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a").replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e").replace(/ì|í|ị|ỉ|ĩ/g,"i").replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o").replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u").replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y").replace(/đ/g,"d");
+            str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A").replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E").replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I").replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O").replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U").replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y").replace(/Đ/g, "D"); return str;
+        }
+
+        function exportToExcelPro() {
+            if (typeof XLSX === "undefined") return Swal.fire('Lỗi', 'Đang tải thư viện Excel', 'error');
+            const data = assets.map((a, i) => ({"STT":i+1, "Mã SP":a.code, "Tên Thiết Bị / Model":a.name, "Phân Loại":a.category, "S/N - IMEI":a.serial||"", "Trạng Thái":a.status, "Người Dùng":a.user||"", "Vị Trí":a.location||"", "Nguyên Giá":a.value||0, "Cấu Hình/Ghi Chú": a.notes||""}));
+            const wb = XLSX.utils.book_new(), ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch:5}, {wch:15}, {wch:35}, {wch:15}, {wch:18}, {wch:18}, {wch:22}, {wch:18}, {wch:15}, {wch:40}];
+            XLSX.utils.book_append_sheet(wb, ws, "DanhSachTaiSan"); XLSX.writeFile(wb, `BaoCao_TaiSan_CNTT_${currentWorkspace}_${Date.now()}.xlsx`); 
+            if(currentUserRole === 'admin') logToCloud("Xuất file", "SYS", "Báo Cáo Excel", "User", "Tải xuống file .xlsx");
+        }
+
+        function exportToPDF() {
+            if (typeof window.jspdf === "undefined") return Swal.fire('Lỗi', 'Đang tải thư viện PDF', 'error');
+            const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape'); doc.text(removeVietnameseTones(`BAO CAO TONG HOP TAI SAN CNTT - ${currentWorkspace}`), 14, 15);
+            const data = assets.map((a, i) => [i+1, removeVietnameseTones(a.code), removeVietnameseTones(a.name), removeVietnameseTones(a.category), removeVietnameseTones(a.status), removeVietnameseTones(a.user||"Kho"), removeVietnameseTones(a.location||"Kho")]);
+            doc.autoTable({head: [['STT', 'Ma Tai San', 'Ten & Model', 'Phan Loai', 'Trang Thai', 'Nguoi Su Dung', 'Vi Tri']], body: data, startY: 25, styles: {fontSize: 8}, headStyles: {fillColor: [2, 132, 199]}});
+            doc.save(`BaoCao_TaiSan_CNTT_${currentWorkspace}_${Date.now()}.pdf`); 
+            if(currentUserRole === 'admin') logToCloud("Xuất file", "SYS", "Báo Cáo PDF", "User", "Tải xuống file .pdf");
+        }
+
+        window.switchTab = switchTab;
+        window.renderDeviceTable = renderDeviceTable;
+        window.openFormModal = openFormModal;
+        window.closeFormModal = closeFormModal;
+        window.handleFormSubmit = handleFormSubmit;
+        window.deleteDevice = deleteDevice;
+        window.recallDevice = recallDevice;
+        window.editDevice = editDevice;
+        window.showDeviceDetails = showDeviceDetails;
+        window.closeDetailModal = closeDetailModal;
+        window.exportToExcelPro = exportToExcelPro;
+        window.exportToPDF = exportToPDF;
+        window.toggleNewCategoryInput = toggleNewCategoryInput;
+        window.toggleUserLocationFields = toggleUserLocationFields;
+        window.clearLogs = clearLogs;
+        window.handleLogin = handleLogin;
+        window.togglePasswordInput = togglePasswordInput;
+        window.logout = logout;
+        window.openChangePasswordModal = openChangePasswordModal;
+        window.closeChangePasswordModal = closeChangePasswordModal;
+        window.submitChangePassword = submitChangePassword;
+        window.openMaintenanceModal = openMaintenanceModal;
+        window.closeMaintenanceModal = closeMaintenanceModal;
+        window.submitMaintenanceForm = submitMaintenanceForm;
+        window.deleteMaintenanceRecord = deleteMaintenanceRecord;
+        window.backupToGoogleDriveFolder = backupToGoogleDriveFolder;
+        window.restoreFromBackupFile = restoreFromBackupFile;
+        window.toggleSelectAllDevices = toggleSelectAllDevices;
+        window.updateSelectedCount = updateSelectedCount;
+        window.openHandoverModalForSelected = openHandoverModalForSelected;
+        window.openHandoverModal = openHandoverModal; 
+        window.setDocumentType = setDocumentType;
+        window.addDeviceToHandoverList = addDeviceToHandoverList;
+        window.removeDeviceFromHandoverList = removeDeviceFromHandoverList;
+        window.closeHandoverModal = closeHandoverModal; 
+        window.printHandoverForm = printHandoverForm; 
+        window.submitAndPrintHandover = submitAndPrintHandover;
+        window.exportHandoverToPDF = exportHandoverToPDF;
+        window.exportHandoverToExcel = exportHandoverToExcel;
+        window.setLogDateFilter = setLogDateFilter;
+        window.renderLogsTable = renderLogsTable;
+    </script>
+</body>
+</html>
