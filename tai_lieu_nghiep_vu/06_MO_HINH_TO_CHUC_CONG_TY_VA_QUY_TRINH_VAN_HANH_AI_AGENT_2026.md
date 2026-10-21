@@ -27,9 +27,9 @@ flowchart TD
     %% Tầng 2: Cố vấn & Tổng công trình sư
     CEO --> ADVISORY{"BAN CỐ VẤN CHIẾN LƯỢC & TỔNG CÔNG TRÌNH SƯ"}
     ADVISORY --> TECH_LEAD["⚡ ANTIGRAVITY (Tech Lead)<br/><i>Trợ lý Code, Chỉ huy Kiến trúc & Điều phối Đội ngũ AI</i>"]
-    ADVISORY --> QA_LEAD["🛡️ CLAUDE (Chief Reviewer)<br/><i>Trợ lý Phản biện Độc lập, Thẩm định Kỹ thuật & Ký duyệt Chéo</i>"]
+    ADVISORY --> STRATEGIC_ADVISOR["🛡️ CLAUDE (Cố Vấn Chiến Lược)<br/><i>Cố vấn Chiến lược Cấp cao, Định hướng Dự án & Thẩm định Độc lập</i>"]
 
-    TECH_LEAD <-->|"Cơ chế Đối ứng Chéo (Peer Review)"| QA_LEAD
+    TECH_LEAD <-->|"Cơ chế Đối ứng Chéo (Peer Review)"| STRATEGIC_ADVISOR
 
     %% Tầng 3: 8 Phòng ban AI Agents chuyên trách
     TECH_LEAD --> AGT_HUB["ĐỘI NGŨ 9 PHÒNG BAN AI AGENTS CHUYÊN TRÁCH"]
@@ -46,8 +46,8 @@ flowchart TD
 
     %% Luồng trả kết quả
     AGT_HUB -.->|"Báo cáo kiểm thử & Log thực tế"| TECH_LEAD
-    TECH_LEAD -.->|"Gửi Phiếu YC-A sang kiểm tra"| QA_LEAD
-    QA_LEAD -.->|"Ký duyệt ĐẠT (OK)"| CEO
+    TECH_LEAD -.->|"Gửi Phiếu YC-A sang kiểm tra"| STRATEGIC_ADVISOR
+    STRATEGIC_ADVISOR -.->|"Ký duyệt ĐẠT (OK)"| CEO
 ```
 
 ---
@@ -80,7 +80,7 @@ sequenceDiagram
     actor CEO as 👑 GIÁM ĐỐC DỰ ÁN (ANH)
     participant AGY as ⚡ Antigravity (Tech Lead)
     participant AGTS as 🤖 8 AI Agents Chuyên Trách
-    participant QA as 🛡️ Claude (Chief Reviewer)
+    participant SA as 🛡️ Claude (Cố Vấn Chiến Lược)
     participant LOG as 📓 Sổ Theo Dõi & Git Commit
 
     CEO->>AGY: 1. Giao mục tiêu / Phê duyệt Kế hoạch
@@ -142,7 +142,7 @@ Hằng ngày, Antigravity chịu trách nhiệm tổng hợp toàn bộ hoạt �
 ```markdown
 ### 📊 BÁO CÁO TIẾN ĐỘ DỰ ÁN MONITOR ENTERPRISE 2026 - NGÀY [DD/MM/YYYY]
 **Kính gửi:** Giám đốc Dự án (Anh)  
-**Người báo cáo:** Antigravity (Tech Lead) | **Đơn vị thẩm định đối ứng:** Claude (Reviewer)
+**Người báo cáo:** Antigravity (Tech Lead) | **Đơn vị thẩm định đối ứng:** Claude (Cố Vấn Chiến Lược)
 
 1. CÁC ĐẦU VIỆC ĐÃ HOÀN THÀNH TRONG NGÀY (DONE):
    - [Mã TODO]: Tên việc - AI Agent thực hiện - Mã commit Git

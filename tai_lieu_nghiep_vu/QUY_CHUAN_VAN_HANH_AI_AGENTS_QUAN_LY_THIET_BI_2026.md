@@ -5,7 +5,7 @@
 **Dự án:** Quản Lý Thiết Bị CNTT (IT Asset Management - Cloud Pro Edition)  
 **Thời gian áp dụng:** 21/10/2026  
 **Chủ dự án / Giám đốc:** Anh (Toàn quyền nghiệm thu & phê duyệt tối cao)  
-**Lead Architects & Trợ lý cấp cao:** Antigravity (Tech Lead) & Claude (Chief Reviewer)  
+**Lead Architects & Trợ lý cấp cao:** Antigravity (Tech Lead) & Claude (Cố Vấn Chiến Lược)  
 
 ---
 
@@ -17,9 +17,9 @@ flowchart TD
 
     CEO --> ADVISORY{"BAN CỐ VẤN CHIẾN LƯỢC & TỔNG CÔNG TRÌNH SƯ"}
     ADVISORY --> TECH_LEAD["⚡ ANTIGRAVITY (Tech Lead)<br/><i>Trợ lý Code, Kiến trúc & Điều phối AI Agents</i>"]
-    ADVISORY --> QA_LEAD["🛡️ CLAUDE (Chief Reviewer)<br/><i>Phản biện độc lập, Thẩm định kỹ thuật & Ký duyệt chéo</i>"]
+    ADVISORY --> STRATEGIC_ADVISOR["🛡️ CLAUDE (Cố Vấn Chiến Lược)<br/><i>Cố vấn Chiến lược Cấp cao, Định hướng Dự án & Thẩm định Độc lập</i>"]
 
-    TECH_LEAD <-->|"Cơ chế Đối ứng Chéo (Peer Review)"| QA_LEAD
+    TECH_LEAD <-->|"Cơ chế Đối ứng Chéo (Peer Review)"| STRATEGIC_ADVISOR
 
     TECH_LEAD --> AGT_HUB["KHỐI 9 AI AGENTS CHUYÊN TRÁCH IT ASSET"]
 
