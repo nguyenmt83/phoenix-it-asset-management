@@ -419,7 +419,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-base sm:text-lg">Trung Tâm Sao Lưu Google Drive Tự Động</h3>
-                            <p class="text-xs text-slate-400">Tài khoản sao lưu chỉ định: <code class="text-emerald-400 font-mono">nguyenmt1983@gmail.com</code> | Thư mục: <code class="text-emerald-400 font-mono">/Backup_Data</code></p>
+                            <p class="text-xs text-slate-400">Tài khoản sao lưu chỉ định: <code class="text-emerald-400 font-mono">nguyenmt1983@gmail.com</code> | Thư mục mặc định: <code class="text-emerald-400 font-mono">D:\PHOENIX\Project Ung Dung Quan Ly CNTT\Backup_database</code></p>
                         </div>
                     </div>
                     <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
@@ -434,14 +434,14 @@
                         <span class="bg-brand-900/80 px-2 py-0.5 rounded border border-brand-500/40 font-mono text-white text-xs">Ca sáng: 08:00 | Ca chiều: 17:00</span>
                     </div>
                     <p class="text-slate-300 leading-relaxed text-xs">
-                        Hệ thống tự động kích hoạt tiến trình đóng gói toàn bộ danh sách thiết bị và lịch sử biến động thành file <code class="text-emerald-300 font-mono">Backup_Data_[Workspace]_[Date].json</code> để lưu vào thư mục <code class="text-emerald-300 font-mono">/Backup_Data</code> trên Google Drive của tài khoản <b>nguyenmt1983@gmail.com</b>.
+                        Hệ thống tự động kích hoạt tiến trình đóng gói toàn bộ danh sách thiết bị và lịch sử biến động thành file <code class="text-emerald-300 font-mono">Backup_Data_[Workspace]_[Date].json</code> để lưu mặc định vào thư mục <code class="text-emerald-300 font-mono">D:\PHOENIX\Project Ung Dung Quan Ly CNTT\Backup_database</code> (kèm đồng bộ Google Drive).
                     </p>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <button onclick="backupToGoogleDriveFolder(false)" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/30">
                         <i class="fa-solid fa-folder-plus text-base"></i>
-                        <span>Sao Lưu Nhanh Ngay Bây Giờ (Thư mục Drive)</span>
+                        <span>Sao Lưu Nhanh (Về Thư Mục Mặc Định)</span>
                     </button>
                     <label class="bg-slate-700 hover:bg-slate-600 text-white py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center space-x-2 shadow-md cursor-pointer">
                         <i class="fa-solid fa-clock-rotate-left text-base"></i>
@@ -2131,7 +2131,8 @@
             const backupData = {
                 workspace: currentWorkspace,
                 account: "nguyenmt1983@gmail.com",
-                targetFolder: "/Backup_Data",
+                targetFolder: "D:\\PHOENIX\\Project Ung Dung Quan Ly CNTT\\Backup_database",
+                defaultLocalPath: "D:\\PHOENIX\\Project Ung Dung Quan Ly CNTT\\Backup_database",
                 backupTime: new Date().toISOString(),
                 scheduleSlot: isAutomated ? "Automated 08:00/17:00" : "Manual trigger",
                 devices: assets,
@@ -2149,10 +2150,10 @@
             Swal.fire({
                 icon: 'success',
                 title: isAutomated ? 'Lịch Sao Lưu Tự Động (08:00/17:00)' : 'Đã Tạo File Sao Lưu!',
-                text: 'Hãy chọn lưu tệp này vào thư mục Backup_Data trên Google Drive (nguyenmt1983@gmail.com).',
+                text: 'Tệp sao lưu JSON đã được tạo. Hãy lưu về thư mục mặc định: D:\\PHOENIX\\Project Ung Dung Quan Ly CNTT\\Backup_database',
                 timer: 3500
             });
-            logToCloud("Sao lưu", "SYS", "Google Drive Backup", "Thư mục Backup_Data", isAutomated ? "Tự động sao lưu theo lịch 08:00/17:00" : "Sao lưu thủ công thành công");
+            logToCloud("Sao lưu", "SYS", "Database Backup", "D:\\PHOENIX\\Project Ung Dung Quan Ly CNTT\\Backup_database", isAutomated ? "Tự động sao lưu theo lịch 08:00/17:00" : "Sao lưu thủ công thành công");
         }
 
         function restoreFromBackupFile(event) {
