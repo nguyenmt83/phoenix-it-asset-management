@@ -1027,8 +1027,6 @@
             if (role === 'admin') {
                 if (!pass) return Swal.fire('Lỗi', 'Vui lòng nhập mật khẩu quản trị viên!', 'error');
 
-                Swal.fire({ title: 'Đang xác thực...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
                 let actualPassword = localStorage.getItem("workspace_" + ws + "_admin_password") || 'admin123';
                 if (db && userId) {
                     try {
@@ -1054,8 +1052,10 @@
                 icon: 'success',
                 title: role === 'admin' ? 'Xin chào Admin!' : 'Truy cập với quyền Khách',
                 text: `Đã kết nối vào không gian: ${ws}`,
-                timer: 1200,
-                showConfirmButton: false
+                confirmButtonText: 'Bắt đầu',
+                confirmButtonColor: '#3085d6',
+                timer: 1500,
+                timerProgressBar: true
             }).then(() => {
                 document.getElementById('loginPassword').value = '';
                 checkAuthStatus();
@@ -2196,8 +2196,6 @@
             if (newPass !== confirmPass) return Swal.fire('Lỗi', 'Mật khẩu xác nhận không khớp với mật khẩu mới!', 'error');
             if (newPass.length < 5) return Swal.fire('Lỗi', 'Mật khẩu phải từ 5 ký tự trở lên!', 'error');
 
-            Swal.fire({ title: 'Đang kiểm tra...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
             let actualPassword = localStorage.getItem('workspace_' + currentWorkspace + '_admin_password') || 'admin123';
             if (db && userId) {
                 try {
@@ -2224,7 +2222,15 @@
             document.getElementById('cpNew').value = '';
             document.getElementById('cpConfirm').value = '';
             closeChangePasswordModal();
-            Swal.fire('Thành công', 'Đã cập nhật mật khẩu quản trị mới thành công!', 'success');
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Đã cập nhật mật khẩu quản trị mới thành công!',
+                confirmButtonText: 'Đồng ý',
+                confirmButtonColor: '#3085d6',
+                timer: 2000,
+                timerProgressBar: true
+            });
         }
 
         function backupToGoogleDriveFolder(isAutomated = false) {
@@ -2280,8 +2286,6 @@
                         cancelButtonText: 'Hủy'
                     }).then(async (result) => {
                         if (result.isConfirmed) {
-                            Swal.fire({ title: 'Đang nạp dữ liệu...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
                             try {
                                 assets = parsed.devices || [];
                                 if (parsed.logs && Array.isArray(parsed.logs)) {
@@ -2299,7 +2303,15 @@
                                     }
                                 }
 
-                                Swal.fire('Thành công!', `Đã khôi phục hoàn tất ${assets.length} thiết bị vào hệ thống.`, 'success');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Thành công!',
+                                    text: `Đã khôi phục hoàn tất ${assets.length} thiết bị vào hệ thống.`,
+                                    confirmButtonText: 'Đồng ý',
+                                    confirmButtonColor: '#3085d6',
+                                    timer: 2000,
+                                    timerProgressBar: true
+                                });
                             } catch (restoreErr) {
                                 console.error("Lỗi restore:", restoreErr);
                                 saveLocalData();
