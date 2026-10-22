@@ -1171,8 +1171,9 @@
                 name: name || "N/A",
                 target: target || "Kho",
                 notes: notes || "",
+                isoDate: dateStr,
                 date: dateStr,
-                time: timeStr,
+                time: `${dateStr.split('-').reverse().join('/')} ${timeStr}`,
                 user: "Admin"
             };
 
@@ -2381,6 +2382,13 @@
         window.exportHandoverToExcel = exportHandoverToExcel;
         window.setLogDateFilter = setLogDateFilter;
         window.renderLogsTable = renderLogsTable;
+        window.getAssets = () => assets;
+        window.getLogs = () => logs;
+        window.getCurrentUserRole = () => currentUserRole;
+        window.getCurrentWorkspace = () => currentWorkspace;
+        window.logToCloud = logToCloud;
+        window.saveLocalData = saveLocalData;
+        window.renderAll = renderAll;
     </script>
 </body>
 </html>
