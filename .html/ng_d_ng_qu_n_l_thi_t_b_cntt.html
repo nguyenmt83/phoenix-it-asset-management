@@ -836,17 +836,14 @@
                 <div>
                     <label class="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase mb-1">Vai Trò Của Bạn</label>
                     <select id="loginRole" onchange="togglePasswordInput()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium text-slate-800 text-sm">
-                        <option value="admin" selected>Quản trị viên (Toàn quyền)</option>
+                        <option value="admin" selected>Quản trị viên (Cần mật khẩu)</option>
                         <option value="viewer">Khách xem (Chỉ xem & xuất báo cáo)</option>
                     </select>
                 </div>
 
                 <div id="passwordContainer" style="display: block;">
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase">Mật Khẩu Quản Trị</label>
-                        <span class="text-[10px] text-emerald-600 font-semibold">Mặc định: admin123</span>
-                    </div>
-                    <input type="password" id="loginPassword" value="admin123" placeholder="Nhập mật khẩu (admin123)..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
+                    <label class="block text-[11px] sm:text-xs font-bold text-slate-700 uppercase mb-1">Mật Khẩu Quản Trị</label>
+                    <input type="password" id="loginPassword" value="" required placeholder="Nhập mật khẩu quản trị..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none text-sm font-medium">
                 </div>
 
                 <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 sm:py-3 rounded-lg transition shadow-lg text-sm mt-2">
@@ -951,8 +948,8 @@
         let currentHandoverDeviceIds = [];
         let currentDocType = 'handover'; // 'handover' | 'recall' | 'technical'
 
-        let currentWorkspace = localStorage.getItem('it_workspace_id') || 'PHOENIX';
-        let currentUserRole = localStorage.getItem('it_user_role') || 'admin';
+        let currentWorkspace = localStorage.getItem('it_workspace_id') || null;
+        let currentUserRole = localStorage.getItem('it_user_role') || 'viewer';
 
         if (Object.keys(firebaseConfig).length > 0) {
             app = initializeApp(firebaseConfig);
@@ -1011,24 +1008,24 @@
                 passContainer.style.display = 'block';
                 passContainer.classList.remove('hidden');
                 passInput.required = true;
-                if (!passInput.value) passInput.value = 'admin123';
             } else {
                 passContainer.style.display = 'none';
                 passContainer.classList.add('hidden');
                 passInput.required = false;
+                passInput.value = '';
             }
         }
 
         async function handleLogin(e) {
             e.preventDefault();
-            const ws = (document.getElementById('loginWorkspace').value || 'PHOENIX').trim();
+            const ws = (document.getElementById('loginWorkspace').value || '').trim();
             const role = document.getElementById('loginRole').value;
             const pass = document.getElementById('loginPassword').value;
 
-            if (ws.length < 3) return Swal.fire('Lỗi', 'Mã không gian phải từ 3 ký tự trở lên.', 'error');
+            if (ws.length < 3) return Swal.fire('Lỗi', 'Vui lòng nhập Mã không gian (ít nhất 3 ký tự).', 'error');
 
             if (role === 'admin') {
-                if (!pass) return Swal.fire('Lỗi', 'Vui lòng nhập mật khẩu quản trị (Mặc định: admin123)!', 'error');
+                if (!pass) return Swal.fire('Lỗi', 'Vui lòng nhập mật khẩu quản trị viên!', 'error');
 
                 Swal.fire({ title: 'Đang xác thực...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -1044,7 +1041,7 @@
                 }
 
                 if (pass !== actualPassword) {
-                    return Swal.fire('Từ chối truy cập', 'Mật khẩu quản trị viên không chính xác (Mặc định: admin123)!', 'error');
+                    return Swal.fire('Từ chối truy cập', 'Mật khẩu quản trị viên không chính xác!', 'error');
                 }
             }
 
@@ -1057,7 +1054,7 @@
                 icon: 'success',
                 title: role === 'admin' ? 'Xin chào Admin!' : 'Truy cập với quyền Khách',
                 text: `Đã kết nối vào không gian: ${ws}`,
-                timer: 1500,
+                timer: 1200,
                 showConfirmButton: false
             }).then(() => {
                 document.getElementById('loginPassword').value = '';
