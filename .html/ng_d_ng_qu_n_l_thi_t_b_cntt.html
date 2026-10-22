@@ -2192,27 +2192,38 @@
             const newPass = document.getElementById('cpNew').value;
             const confirmPass = document.getElementById('cpConfirm').value;
 
-            if (newPass !== confirmPass) return Swal.fire('Lỗi', 'Mật khẩu mới không khớp!', 'error');
+            if (newPass !== confirmPass) return Swal.fire('Lỗi', 'Mật khẩu xác nhận không khớp với mật khẩu mới!', 'error');
             if (newPass.length < 5) return Swal.fire('Lỗi', 'Mật khẩu phải từ 5 ký tự trở lên!', 'error');
 
             Swal.fire({ title: 'Đang kiểm tra...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            
-            let actualPassword = 'admin123';
-            const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', `workspace_${currentWorkspace}_settings`, 'config');
-            try {
-                const docSnap = await getDoc(settingsRef);
-                if (docSnap.exists() && docSnap.data().adminPassword) actualPassword = docSnap.data().adminPassword;
-            } catch (err) {}
 
-            if (currentPass !== actualPassword) return Swal.fire('Lỗi', 'Mật khẩu hiện tại không đúng!', 'error');
-
-            try {
-                await setDoc(settingsRef, { adminPassword: newPass }, { merge: true });
-                Swal.fire('Thành công', 'Đã cập nhật mật khẩu mới!', 'success');
-                closeChangePasswordModal();
-            } catch (err) {
-                Swal.fire('Lỗi', 'Không thể lưu mật khẩu', 'error');
+            let actualPassword = localStorage.getItem('workspace_' + currentWorkspace + '_admin_password') || 'admin123';
+            if (db && userId) {
+                try {
+                    const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'workspace_' + currentWorkspace + '_settings', 'config');
+                    const docSnap = await getDoc(settingsRef);
+                    if (docSnap.exists() && docSnap.data().adminPassword) actualPassword = docSnap.data().adminPassword;
+                } catch (err) {}
             }
+
+            if (currentPass !== actualPassword) {
+                return Swal.fire('Lỗi', 'Mật khẩu hiện tại không đúng!', 'error');
+            }
+
+            localStorage.setItem('workspace_' + currentWorkspace + '_admin_password', newPass);
+
+            if (db && userId) {
+                try {
+                    const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'workspace_' + currentWorkspace + '_settings', 'config');
+                    await setDoc(settingsRef, { adminPassword: newPass }, { merge: true });
+                } catch (err) { console.warn('Cloud save password error:', err); }
+            }
+
+            document.getElementById('cpCurrent').value = '';
+            document.getElementById('cpNew').value = '';
+            document.getElementById('cpConfirm').value = '';
+            closeChangePasswordModal();
+            Swal.fire('Thành công', 'Đã cập nhật mật khẩu quản trị mới thành công!', 'success');
         }
 
         function backupToGoogleDriveFolder(isAutomated = false) {
